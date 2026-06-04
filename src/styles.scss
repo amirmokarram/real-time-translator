@@ -1,0 +1,55 @@
+// ── CSS Variables ─────────────────────────────────────────────────────────────
+
+:root {
+  --bg:               #0f1117;
+  --surface:          #15182a;
+  --surface-elevated: #1c2035;
+  --surface-hover:    #232740;
+  --border:           #2a2e47;
+
+  --primary:          #7c6cf8;
+  --primary-hover:    #6a5ce6;
+  --primary-muted:    rgba(124, 108, 248, 0.12);
+
+  --accent:           #00d4aa;
+  --accent-muted:     rgba(0, 212, 170, 0.12);
+
+  --text-primary:     #e4e6f1;
+  --text-secondary:   #8b8fa8;
+  --text-muted:       #555a77;
+}
+
+// ── Reset ─────────────────────────────────────────────────────────────────────
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text-primary);
+  font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+::-webkit-scrollbar        { width: 5px; height: 5px; }
+::-webkit-scrollbar-track  { background: transparent; }
+::-webkit-scrollbar-thumb  { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+h1, h2, h3 { font-weight: 700; color: var(--text-primary); }

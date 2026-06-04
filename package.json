@@ -1,0 +1,47 @@
+{
+  "name": "claude-real-time-translator",
+  "version": "0.0.0",
+  "main": "dist-electron/main.js",
+  "scripts": {
+    "ng": "ng",
+    "start": "ng serve",
+    "build": "ng build",
+    "watch": "ng build --watch --configuration development",
+    "electron:compile": "tsc -p tsconfig.electron.json",
+    "electron:dev": "concurrently -k -n Angular,Electron -c cyan,yellow \"ng serve\" \"npm run electron:wait-start\"",
+    "electron:wait-start": "wait-on http://localhost:4200 && npm run electron:compile && cross-env ELECTRON_DEV=true electron .",
+    "electron:build": "ng build --configuration production && tsc -p tsconfig.electron.json",
+    "electron:dist": "npm run electron:build && electron-builder",
+    "electron:dist:win": "npm run electron:build && electron-builder --win",
+    "electron:dist:mac": "npm run electron:build && electron-builder --mac",
+    "electron:dist:linux": "npm run electron:build && electron-builder --linux"
+  },
+  "private": true,
+  "packageManager": "npm@11.6.2",
+  "dependencies": {
+    "@angular/common": "^21.2.0",
+    "@angular/compiler": "^21.2.0",
+    "@angular/core": "^21.2.0",
+    "@angular/forms": "^21.2.0",
+    "@angular/platform-browser": "^21.2.0",
+    "@angular/router": "^21.2.0",
+    "@anthropic-ai/sdk": "^0.100.1",
+    "electron-store": "^11.0.2",
+    "rxjs": "~7.8.0",
+    "tslib": "^2.3.0"
+  },
+  "devDependencies": {
+    "@angular/build": "^21.2.13",
+    "@angular/cli": "^21.2.13",
+    "@angular/compiler-cli": "^21.2.0",
+    "@types/node": "^25.9.1",
+    "concurrently": "^10.0.3",
+    "cross-env": "^10.1.0",
+    "electron": "^42.3.3",
+    "electron-builder": "^26.8.1",
+    "prettier": "^3.8.1",
+    "ts-node": "^10.9.2",
+    "typescript": "~5.9.2",
+    "wait-on": "^9.0.10"
+  }
+}

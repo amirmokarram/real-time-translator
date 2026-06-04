@@ -1,0 +1,175 @@
+<div class="translator-layout">
+
+  <!-- ── Column headers ─────────────────────────────────────────────────── -->
+  <div class="col-headers">
+    <div class="col-header">
+      <span class="lang-label"><span class="lang-flag">🇬🇧</span> English</span>
+      @if (audio.isCapturing() && transcription.isRunning()) {
+        <span class="live-badge"><span class="pulse-dot"></span> LIVE</span>
+      }
+    </div>
+    <div class="col-header">
+      <span class="lang-label"><span class="lang-flag">🇮🇷</span> فارسی</span>
+      <span class="provider-tag">{{ providerName }}</span>
+    </div>
+  </div>
+
+  <!-- ── History — single scroll container, rows of (EN | FA) ───────────── -->
+  <div class="history-scroll" #historyContainer>
+
+    @if (translation.history().length === 0) {
+      <div class="history-empty">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.2">
+          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8"/>
+        </svg>
+        <p>Start audio capture or type text below</p>
+      </div>
+    } @else {
+      <!-- Spacer pushes rows to the bottom when there are only a few -->
+      <div class="history-spacer"></div>
+
+      @for (entry of translation.history(); track trackEntry($index, entry)) {
+        <div class="history-row">
+          <div class="hcell hcell-en">
+            <p class="hcell-text">{{ entry.english }}</p>
+            <span class="hcell-meta">{{ formatTime(entry.timestamp) }}</span>
+          </div>
+          <div class="hcell hcell-fa">
+            <p class="hcell-text persian-text">{{ entry.persian }}</p>
+            <span class="hcell-meta">{{ entry.processingTimeMs }}ms · {{ entry.provider }}</span>
+          </div>
+        </div>
+      }
+    }
+
+  </div>
+
+  <!-- ── Error banners ───────────────────────────────────────────────────── -->
+  @if (error()) {
+    <div class="error-banner">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      {{ error() }}
+      <button class="error-close" (click)="error.set(null)">✕</button>
+    </div>
+  }
+  @if (audio.captureError()) {
+    <div class="error-banner">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      {{ audio.captureError() }}
+      <button class="error-close" (click)="audio.captureError.set(null)">✕</button>
+    </div>
+  }
+  @if (transcription.error()) {
+    <div class="error-banner">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      {{ transcription.error() }}
+      <button class="error-close" (click)="transcription.error.set(null)">✕</button>
+    </div>
+  }
+
+  <!-- ── Live panel (capturing) / Manual input (idle) ───────────────────── -->
+  @if (audio.isCapturing()) {
+    <div class="live-panel">
+      <div class="live-cell live-cell-en">
+        @if (translation.isTranslating()) {
+          <span class="translating-pill"><span class="spinner-xs"></span> translating…</span>
+        }
+        <p class="live-text" [class.interim]="!!transcription.interimText()">
+          {{ liveEnglish || 'Listening…' }}
+        </p>
+      </div>
+      <div class="live-cell live-cell-fa">
+        @if (translation.streamingPersian()) {
+          <p class="live-text persian-text">{{ translation.streamingPersian() }}<span class="cursor-blink">|</span></p>
+        } @else {
+          <p class="live-text live-idle">در انتظار صدا…</p>
+        }
+      </div>
+    </div>
+  } @else {
+    <div class="input-area">
+      <div class="input-row">
+        <textarea
+          class="text-input"
+          placeholder="Type English text to translate…"
+          rows="2"
+          [(ngModel)]="inputText"
+          (keydown.control.enter)="doTranslate()"
+          (keydown.meta.enter)="doTranslate()">
+        </textarea>
+        <button
+          class="translate-btn"
+          [disabled]="translation.isTranslating() || !inputText.trim()"
+          (click)="doTranslate()">
+          @if (translation.isTranslating()) {
+            <span class="spinner-sm"></span>
+          } @else {
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M5 12h14M12 5l7 7-7 7"/>
+            </svg>
+          }
+          {{ translation.isTranslating() ? 'Translating…' : 'Translate' }}
+        </button>
+      </div>
+      <p class="input-hint">Ctrl+Enter to translate</p>
+    </div>
+  }
+
+  <!-- ── Audio bar ───────────────────────────────────────────────────────── -->
+  <div class="audio-bar">
+    <div class="source-selector">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="source-icon">
+        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+        <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+      </svg>
+      <select
+        class="source-select"
+        [disabled]="audio.isCapturing()"
+        [value]="audio.selectedSource()?.id ?? ''"
+        (change)="onSourceChange($event)">
+        @for (src of audio.sources(); track src.id) {
+          <option [value]="src.id">{{ src.name }}</option>
+        }
+      </select>
+    </div>
+
+    <div class="audio-level-bar">
+      <div class="audio-level-fill" [style.width]="audioBarWidth"></div>
+    </div>
+
+    <button
+      class="capture-btn"
+      [class.capturing]="audio.isCapturing()"
+      (click)="toggleCapture()">
+      @if (audio.isCapturing()) {
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+          <rect x="4" y="4" width="16" height="16" rx="2"/>
+        </svg>
+        Stop
+      } @else {
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+          <circle cx="12" cy="12" r="8"/>
+        </svg>
+        Start Capture
+      }
+    </button>
+
+    @if (translation.history().length > 0) {
+      <button class="clear-btn" (click)="translation.clearHistory()" title="Clear history">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="3 6 5 6 21 6"/>
+          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+          <path d="M10 11v6M14 11v6M9 6V4h6v2"/>
+        </svg>
+      </button>
+    }
+  </div>
+
+</div>

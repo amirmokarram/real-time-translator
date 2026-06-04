@@ -1,0 +1,88 @@
+<header class="app-header">
+  <div class="header-drag-region"></div>
+
+  <div class="header-left">
+    <span class="app-logo">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/>
+        <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+      </svg>
+    </span>
+    <span class="app-name">Real-Time Translator</span>
+  </div>
+
+  <div class="header-center">
+    <nav class="header-nav">
+      <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="nav-item">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+        </svg>
+        Translator
+      </a>
+      <a routerLink="/settings" routerLinkActive="active" class="nav-item">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+        Settings
+      </a>
+    </nav>
+  </div>
+
+  <div class="header-right">
+    <button
+      class="overlay-toggle"
+      [class.active]="overlayOpen()"
+      (click)="toggleOverlay()"
+      [title]="overlayOpen() ? 'Close subtitle overlay' : 'Open floating subtitle overlay'">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="2" y="4" width="20" height="16" rx="2"/>
+        <rect x="5" y="14" width="14" height="3" rx="1" fill="currentColor" stroke="none"/>
+      </svg>
+      Overlay
+    </button>
+
+    @if (settings.loaded()) {
+      <div class="provider-selector" (click)="toggleProviderMenu()" (keydown.enter)="toggleProviderMenu()" tabindex="0">
+        <span class="provider-label">{{ activeProviderName }}</span>
+        <svg class="chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <polyline points="6 9 12 15 18 9"/>
+        </svg>
+
+        @if (showProviderMenu()) {
+          <div class="provider-menu" (click)="$event.stopPropagation()">
+            @for (p of settings.providers(); track p.id) {
+              <button
+                class="provider-option"
+                [class.active]="p.id === settings.activeProvider()"
+                (click)="selectProvider(p.id)">
+                {{ p.name }}
+              </button>
+            }
+          </div>
+        }
+      </div>
+    }
+
+    @if (bridge.platform !== 'darwin') {
+      <div class="window-controls">
+        <button class="win-btn minimize" title="Minimize" (click)="bridge.minimizeWindow()">
+          <svg width="10" height="10" viewBox="0 0 10 10"><line x1="0" y1="5" x2="10" y2="5" stroke="currentColor" stroke-width="1.5"/></svg>
+        </button>
+        <button class="win-btn maximize" title="Maximize" (click)="bridge.maximizeWindow()">
+          <svg width="10" height="10" viewBox="0 0 10 10"><rect x="1" y="1" width="8" height="8" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+        </button>
+        <button class="win-btn close" title="Close" (click)="bridge.closeWindow()">
+          <svg width="10" height="10" viewBox="0 0 10 10">
+            <line x1="1" y1="1" x2="9" y2="9" stroke="currentColor" stroke-width="1.5"/>
+            <line x1="9" y1="1" x2="1" y2="9" stroke="currentColor" stroke-width="1.5"/>
+          </svg>
+        </button>
+      </div>
+    }
+  </div>
+</header>
+
+@if (showProviderMenu()) {
+  <div class="menu-overlay" (click)="closeMenu()"></div>
+}

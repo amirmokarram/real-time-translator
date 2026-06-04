@@ -1,0 +1,54 @@
+<div class="overlay-root" [class.click-through]="clickThrough()">
+
+  <!-- Toolbar (wakes on hover when click-through is on) -->
+  <div class="overlay-toolbar" (mouseenter)="onToolbarEnter()" (mouseleave)="onToolbarLeave()">
+    <span class="drag-grip" title="Drag to move">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+        <circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/>
+        <circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/>
+        <circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/>
+      </svg>
+    </span>
+
+    <div class="toolbar-actions">
+      <button class="ov-btn" [class.on]="showEnglish()" (click)="toggleEnglish()" title="Toggle English line">
+        EN
+      </button>
+      <button class="ov-btn" (click)="smallerFont()" title="Smaller text">A−</button>
+      <button class="ov-btn" (click)="biggerFont()" title="Bigger text">A+</button>
+      <button class="ov-btn" [class.on]="clickThrough()" (click)="toggleClickThrough()"
+        [title]="clickThrough() ? 'Click-through ON (clicks pass through)' : 'Click-through OFF'">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          @if (clickThrough()) {
+            <path d="M9 11.5V6a3 3 0 0 1 6 0v5.5"/><path d="M5 11h14l-1.5 8.5a2 2 0 0 1-2 1.5H8.5a2 2 0 0 1-2-1.5z"/>
+          } @else {
+            <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M5 10v2a7 7 0 0 0 14 0v-2"/>
+          }
+        </svg>
+      </button>
+      <button class="ov-btn close" (click)="close()" title="Close overlay">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Subtitle content -->
+  <div class="overlay-content">
+    @if (!english() && !persian()) {
+      <p class="overlay-idle">در انتظار ترجمه… · Waiting for translation…</p>
+    }
+
+    @if (showEnglish() && english()) {
+      <p class="overlay-en" [style.fontSize.px]="fontSize() * 0.62">{{ english() }}</p>
+    }
+
+    @if (persian()) {
+      <p class="overlay-fa" [style.fontSize.px]="fontSize()">{{ persian() }}</p>
+    } @else if (isTranslating()) {
+      <p class="overlay-fa translating" [style.fontSize.px]="fontSize()">…</p>
+    }
+  </div>
+
+</div>
