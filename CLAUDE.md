@@ -1,0 +1,39 @@
+# Real-Time Translator — Project Context
+
+Cross-platform desktop app for **real-time English→Persian (Farsi) translation of system audio** (meetings, videos, calls). The user (Amir) listens to English audio and reads a live Persian translation.
+
+> Full detail lives in [`docs/memory/`](docs/memory/). This file is the auto-loaded summary — it travels with the repo, so project context survives a machine/OS change. The canonical copies I auto-read also live in `~/.claude/projects/D--Claude-RealTimeTranslator/memory/`; keep the two in sync (treat `~/.claude` as source of truth I edit, then copy here before committing).
+
+## Stack
+- **Angular 21** (standalone components, signals, `@if`/`@for`) — renderer
+- **Electron 42** — desktop shell
+- **DeepGram** — streaming speech-to-text (WebSocket)
+- 6 switchable translation providers: Claude, Google, DeepL, Microsoft, OpenAI, LibreTranslate
+- Persian UI: Vazirmatn font, RTL, dark theme
+
+## Architecture (key rules)
+- **API keys & all translation/STT API calls stay in the Electron MAIN process** — never move them to Angular services.
+- Renderer ↔ main via secure IPC bridge (`contextBridge` + `electron/preload.ts`, typed `ElectronAPI`).
+- Router uses **HashLocationStrategy** (required for `file://` prod load; also how the overlay targets `#/overlay`).
+- Translation events (`translation:source`/`:chunk`/`:complete`) are **broadcast to all windows** so the overlay mirrors the main window for free.
+- Settings persist to `userData/settings.json`.
+- TS isolation: `tsconfig.app.json` (renderer, browser types) vs `tsconfig.electron.json` (main, CommonJS/Node).
+
+## Build & run (Windows / PowerShell)
+- `npm run electron:dev` — dev (ng serve :4200 + Electron hot-reload)
+- `npm run electron:compile` — compile Electron TS only → `dist-electron/`
+- `npm run electron:dist:win` — package Windows installer
+- After any **main-process** change: recompile Electron + restart.
+
+## Critical gotchas (see docs/memory/gotchas-and-lessons.md)
+- **Web Speech API does NOT work in Electron** (no Google keys → always `error: network`). Use DeepGram.
+- **Desktop audio capture needs a video track** — request both in `getUserMedia`, discard the video track.
+- **`:host { display:flex; height:100% }`** required on full-height components or flex children grow unbounded.
+- **LibreTranslate** needs explicit `Content-Length` (else "socket hang up"); `libretranslate.com` is paid — run local Docker `--load-only en,fa`.
+- **CSP must include `wss:`** for streaming providers.
+
+## Status
+Phases 1–4 mostly done: capture → STT → translate → live dual-pane display, **overlay mode**, **history export (TXT/SRT)**. Remaining: system tray + global hotkeys, and packaging the installer. See `docs/memory/phase-status.md`.
+
+## Working with Amir
+Plan first, then build phase-by-phase (he approves each, then says "next"). He tests each phase and reports precise bugs — trust them, verify the real cause. Commit only when asked. Shell is **PowerShell** (the Bash tool has quoting issues here).
