@@ -101,6 +101,21 @@ export class ElectronBridgeService {
     );
   }
 
+  // ── Export ─────────────────────────────────────────────────────────────────
+
+  exportFile(content: string, defaultName: string): Promise<{ saved: boolean; path?: string }> {
+    if (this.api) return this.api.exportFile({ content, defaultName });
+    // Browser fallback: trigger a blob download
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = defaultName;
+    a.click();
+    URL.revokeObjectURL(url);
+    return Promise.resolve({ saved: true });
+  }
+
   // ── Overlay ────────────────────────────────────────────────────────────────
 
   toggleOverlay(): Promise<boolean> {

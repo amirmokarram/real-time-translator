@@ -23,6 +23,9 @@ const electronAPI = {
   validateProvider: (payload: unknown) => ipcRenderer.invoke('translation:validate', payload),
   getAvailableProviders: () => ipcRenderer.invoke('translation:get-providers'),
 
+  // Export
+  exportFile: (payload: unknown) => ipcRenderer.invoke('export:save', payload),
+
   // Overlay window
   toggleOverlay: () => ipcRenderer.invoke('overlay:toggle'),
   isOverlayOpen: () => ipcRenderer.invoke('overlay:is-open'),

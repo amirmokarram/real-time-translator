@@ -1,4 +1,5 @@
-import { IpcMain, BrowserWindow, IpcMainInvokeEvent } from 'electron';
+import { IpcMain, BrowserWindow, IpcMainInvokeEvent, dialog } from 'electron';
+import * as fs from 'fs/promises';
 import { SettingsStore } from './settings-store';
 import { AudioCapture } from './audio-capture';
 import { OverlayManager } from './overlay-window';
@@ -76,6 +77,22 @@ export function registerIpcHandlers(
     const provider = registry.get(providerId);
     if (!provider) return { valid: false, error: 'Unknown provider' };
     return provider.validate(providerSettings);
+  });
+
+  // ── Export history to file ──────────────────────────────────────────────────
+  ipcMain.handle('export:save', async (_event, payload: unknown) => {
+    const { content, defaultName } = payload as { content: string; defaultName: string };
+    const result = await dialog.showSaveDialog(win, {
+      defaultPath: defaultName,
+      filters: [
+        { name: 'Subtitles', extensions: ['srt'] },
+        { name: 'Text', extensions: ['txt'] },
+        { name: 'All Files', extensions: ['*'] },
+      ],
+    });
+    if (result.canceled || !result.filePath) return { saved: false };
+    await fs.writeFile(result.filePath, content, 'utf-8');
+    return { saved: true, path: result.filePath };
   });
 
   // ── Overlay window ──────────────────────────────────────────────────────────

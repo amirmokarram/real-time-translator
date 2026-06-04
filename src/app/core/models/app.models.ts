@@ -74,6 +74,8 @@ export interface ElectronAPI {
   translate(payload: { text: string; providerId: string }): Promise<TranslationResult>;
   validateProvider(payload: { providerId: string }): Promise<{ valid: boolean; error?: string }>;
   getAvailableProviders(): Promise<ProviderMeta[]>;
+  // Export
+  exportFile(payload: { content: string; defaultName: string }): Promise<{ saved: boolean; path?: string }>;
   // Overlay window
   toggleOverlay(): Promise<boolean>;
   isOverlayOpen(): Promise<boolean>;

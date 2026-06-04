@@ -162,7 +162,26 @@
     </button>
 
     @if (translation.history().length > 0) {
-      <button class="clear-btn" (click)="translation.clearHistory()" title="Clear history">
+      <div class="export-wrap">
+        <button class="icon-btn" (click)="toggleExportMenu()" title="Export history">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+        </button>
+        @if (showExportMenu()) {
+          <div class="export-menu" (click)="$event.stopPropagation()">
+            <button class="export-option" (click)="exportAs('txt')">
+              <strong>Text</strong> <span>.txt transcript</span>
+            </button>
+            <button class="export-option" (click)="exportAs('srt')">
+              <strong>Subtitles</strong> <span>.srt with timecodes</span>
+            </button>
+          </div>
+        }
+      </div>
+
+      <button class="icon-btn danger" (click)="translation.clearHistory()" title="Clear history">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <polyline points="3 6 5 6 21 6"/>
           <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
@@ -171,5 +190,9 @@
       </button>
     }
   </div>
+
+  @if (showExportMenu()) {
+    <div class="menu-backdrop" (click)="showExportMenu.set(false)"></div>
+  }
 
 </div>

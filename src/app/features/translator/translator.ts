@@ -7,6 +7,7 @@ import { TranslationService } from '../../core/services/translation.service';
 import { AudioService } from '../../core/services/audio.service';
 import { TranscriptionService } from '../../core/services/transcription.service';
 import { SettingsService } from '../../core/services/settings.service';
+import { ExportService, ExportFormat } from '../../core/services/export.service';
 import { TranslationEntry } from '../../core/models/app.models';
 
 @Component({
@@ -21,9 +22,11 @@ export class TranslatorComponent implements OnInit, OnDestroy {
   protected audio = inject(AudioService);
   protected transcription = inject(TranscriptionService);
   protected settings = inject(SettingsService);
+  private exportSvc = inject(ExportService);
 
   protected inputText = '';
   protected error = signal<string | null>(null);
+  protected showExportMenu = signal(false);
 
   private lastTranslatedText = '';
 
@@ -82,6 +85,19 @@ export class TranslatorComponent implements OnInit, OnDestroy {
     const id = (event.target as HTMLSelectElement).value;
     const source = this.audio.sources().find((s) => s.id === id);
     if (source) this.audio.selectSource(source);
+  }
+
+  protected toggleExportMenu(): void {
+    this.showExportMenu.update((v) => !v);
+  }
+
+  protected async exportAs(format: ExportFormat): Promise<void> {
+    this.showExportMenu.set(false);
+    try {
+      await this.exportSvc.export(this.translation.history(), format);
+    } catch (err: unknown) {
+      this.error.set(err instanceof Error ? err.message : 'Export failed');
+    }
   }
 
   protected async toggleCapture(): Promise<void> {
