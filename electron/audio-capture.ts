@@ -3,25 +3,32 @@ import { desktopCapturer } from 'electron';
 export interface AudioSource {
   id: string;
   name: string;
-  thumbnail: string;
+  kind: 'system' | 'microphone';
+  thumbnail?: string;
 }
 
 export class AudioCapture {
   private captureActive = false;
 
+  // Returns a single "System Audio" entry. Chromium still requires a real
+  // screen source id to drive its desktop-audio loopback, so we grab the first
+  // screen and embed its id (microphones are enumerated in the renderer).
   async getSources(): Promise<AudioSource[]> {
     try {
       const sources = await desktopCapturer.getSources({
         types: ['screen'],
-        thumbnailSize: { width: 240, height: 135 },
         fetchWindowIcons: false,
       });
 
-      return sources.map((src) => ({
-        id: src.id,
-        name: src.name || 'Screen',
-        thumbnail: src.thumbnail.toDataURL(),
-      }));
+      if (sources.length === 0) return [];
+
+      return [
+        {
+          id: `system:${sources[0].id}`,
+          name: 'System Audio',
+          kind: 'system',
+        },
+      ];
     } catch {
       return [];
     }

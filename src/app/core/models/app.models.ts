@@ -36,9 +36,10 @@ export interface AppSettings {
 // ── Audio ─────────────────────────────────────────────────────────────────────
 
 export interface AudioSource {
-  id: string;
+  id: string; // 'system:<screenId>' or 'mic:<deviceId>'
   name: string;
-  thumbnail: string;
+  kind: 'system' | 'microphone';
+  thumbnail?: string; // optional — microphones have no thumbnail
 }
 
 // ── Translation ───────────────────────────────────────────────────────────────

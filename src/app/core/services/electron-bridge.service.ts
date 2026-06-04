@@ -55,8 +55,8 @@ export class ElectronBridgeService {
   getAudioSources(): Promise<AudioSource[]> {
     return (
       this.api?.getAudioSources() ??
-      Promise.resolve([
-        { id: 'mock-system', name: 'System Audio (Mock)', thumbnail: '' },
+      Promise.resolve<AudioSource[]>([
+        { id: 'system:mock', name: 'System Audio (Mock)', kind: 'system' },
       ])
     );
   }

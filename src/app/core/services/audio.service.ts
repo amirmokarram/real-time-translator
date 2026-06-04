@@ -43,10 +43,39 @@ export class AudioService {
   private resources: CaptureResources | null = null;
 
   async loadSources(): Promise<void> {
-    const sources = await this.bridge.getAudioSources();
+    const system = await this.bridge.getAudioSources();
+    const microphones = await this.loadMicrophones();
+    const sources = [...system, ...microphones];
+
     this.sources.set(sources);
     if (sources.length > 0 && !this.selectedSource()) {
-      this.selectedSource.set(sources[0]);
+      this.selectedSource.set(sources[0]); // System Audio is the default
+    }
+  }
+
+  // Microphones are a browser concern — enumerate them in the renderer.
+  // Device labels are only populated once mic permission has been granted, so
+  // we probe with a short-lived getUserMedia first, then fall back to numbered
+  // names if labels are still empty (e.g. permission denied).
+  private async loadMicrophones(): Promise<AudioSource[]> {
+    if (!navigator.mediaDevices?.enumerateDevices) return [];
+
+    try {
+      const probe = await navigator.mediaDevices
+        .getUserMedia({ audio: true })
+        .catch(() => null);
+      probe?.getTracks().forEach((t) => t.stop());
+
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      return devices
+        .filter((d) => d.kind === 'audioinput')
+        .map((d, i) => ({
+          id: `mic:${d.deviceId}`,
+          name: d.label || `Microphone ${i + 1}`,
+          kind: 'microphone' as const,
+        }));
+    } catch {
+      return [];
     }
   }
 
@@ -106,6 +135,19 @@ export class AudioService {
   // ── Private ──────────────────────────────────────────────────────────────────
 
   private async acquireStream(source: AudioSource): Promise<MediaStream> {
+    // Microphone input — a plain getUserMedia on the chosen device. Works in
+    // both Electron and browser dev mode.
+    if (source.kind === 'microphone') {
+      const deviceId = source.id.replace(/^mic:/, '');
+      return navigator.mediaDevices.getUserMedia({
+        audio: {
+          deviceId: deviceId ? { exact: deviceId } : undefined,
+          echoCancellation: false,
+          noiseSuppression: false,
+        },
+      });
+    }
+
     if (!this.bridge.isElectron) {
       // Browser dev mode — fall back to microphone so the audio pipeline can be tested
       return navigator.mediaDevices.getUserMedia({
@@ -113,9 +155,11 @@ export class AudioService {
       });
     }
 
-    // Electron: use Chromium's WASAPI loopback (Windows) / CoreAudio loopback (macOS)
-    // The video constraint is required — Chromium enforces it for desktop audio capture.
-    // We stop video tracks immediately after acquiring the stream.
+    // System audio (Electron): use Chromium's WASAPI loopback (Windows) /
+    // CoreAudio loopback (macOS). The video constraint is required — Chromium
+    // enforces it for desktop audio capture. We stop video tracks immediately
+    // after acquiring the stream. The real screen id is embedded after 'system:'.
+    const screenId = source.id.replace(/^system:/, '');
     const constraints: ChromiumDesktopConstraints = {
       audio: {
         mandatory: { chromeMediaSource: 'desktop' },
@@ -123,7 +167,7 @@ export class AudioService {
       video: {
         mandatory: {
           chromeMediaSource: 'desktop',
-          chromeMediaSourceId: source.id,
+          chromeMediaSourceId: screenId,
           maxWidth: 1,
           maxHeight: 1,
           maxFrameRate: 1,
