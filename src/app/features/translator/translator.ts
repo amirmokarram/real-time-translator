@@ -27,6 +27,7 @@ export class TranslatorComponent implements OnInit, OnDestroy {
   protected inputText = '';
   protected error = signal<string | null>(null);
   protected showExportMenu = signal(false);
+  protected copiedId = signal<string | null>(null);
 
   private lastTranslatedText = '';
 
@@ -78,6 +79,19 @@ export class TranslatorComponent implements OnInit, OnDestroy {
       await this.translation.translate(text);
     } catch (err: unknown) {
       this.error.set(err instanceof Error ? err.message : 'Translation failed');
+    }
+  }
+
+  // Copy a row's English source text — handy mid-meeting when there's no time to retype.
+  protected async copyEnglish(entry: TranslationEntry): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(entry.english);
+      this.copiedId.set(entry.id);
+      setTimeout(() => {
+        if (this.copiedId() === entry.id) this.copiedId.set(null);
+      }, 1500);
+    } catch {
+      this.error.set('Could not copy to clipboard');
     }
   }
 

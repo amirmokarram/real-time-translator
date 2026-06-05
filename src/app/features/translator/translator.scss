@@ -163,6 +163,46 @@
   color: var(--text-muted);
 }
 
+// ── Per-row copy-English button ───────────────────────────────────────────────
+
+.hcell-en {
+  position: relative;
+}
+
+.copy-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 6px;
+  font-size: 10px;
+  line-height: 1;
+  color: var(--text-muted);
+  background: var(--bg-elevated, rgba(255, 255, 255, 0.06));
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s ease, color 0.12s ease, background 0.12s ease;
+
+  &:hover {
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  &.copied {
+    opacity: 1;
+    color: #4ade80; // green confirmation
+    border-color: #4ade80;
+  }
+}
+
+.history-row:hover .copy-btn {
+  opacity: 1;
+}
+
 // ── Error banners ─────────────────────────────────────────────────────────────
 
 .error-banner {
