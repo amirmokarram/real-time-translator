@@ -7,6 +7,9 @@
   flex-direction: column;
   height: 100%;
   overflow: hidden;
+  // Shared height for the bottom composer — the idle Translate panel and the
+  // capturing Live panel both use this so switching never shifts the layout.
+  --composer-height: 96px;
 }
 
 // ── Layout shell ─────────────────────────────────────────────────────────────
@@ -234,8 +237,9 @@
 .live-panel {
   display: flex;
   flex-shrink: 0;
-  min-height: 72px;
-  max-height: 130px;
+  // Match the idle Translate panel height exactly so swapping never shifts the UI
+  height: var(--composer-height);
+  box-sizing: border-box;
   border-top: 2px solid transparent;
   // Gradient top border signals "this is where to look"
   border-image: linear-gradient(90deg, var(--primary), var(--accent)) 1;
@@ -305,6 +309,12 @@
   border-top: 1px solid var(--border);
   background: var(--surface-elevated);
   flex-shrink: 0;
+  // Shared fixed height — the live panel mirrors this so the two never differ
+  height: var(--composer-height);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .input-row {
