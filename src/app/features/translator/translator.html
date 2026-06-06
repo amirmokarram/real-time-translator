@@ -95,17 +95,9 @@
   @if (audio.isCapturing()) {
     <div class="live-panel">
       <div class="live-cell live-cell-en">
-        @if (translation.isTranslating()) {
-          <span class="translating-pill"><span class="spinner-xs"></span> translating…</span>
-        }
         <p class="live-text" [class.interim]="!!transcription.interimText()">
           {{ liveEnglish || 'Listening…' }}
         </p>
-      </div>
-      <div class="live-cell live-cell-fa">
-        @if (translation.streamingPersian()) {
-          <p class="live-text persian-text">{{ translation.streamingPersian() }}<span class="cursor-blink">|</span></p>
-        }
       </div>
     </div>
   } @else {

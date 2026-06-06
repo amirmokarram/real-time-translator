@@ -248,14 +248,14 @@
 
 .live-cell {
   flex: 1;
+  width: 100%;
   padding: 10px 14px;
   display: flex;
   flex-direction: column;
   justify-content: center;
   min-width: 0;
-  overflow: hidden;
-
-  &.live-cell-fa { border-left: 1px solid var(--border); }
+  // Full width, single column — scroll when the detected speech overflows
+  overflow-y: auto;
 }
 
 .translating-pill {
@@ -272,11 +272,6 @@
   line-height: 1.6;
   color: var(--text-primary);
   margin: 0;
-  // Clamp to 3 lines so the panel stays a fixed height
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
 
   &.interim {
     color: var(--text-secondary);
