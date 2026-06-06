@@ -29,18 +29,23 @@ export class TranslatorComponent implements OnInit, OnDestroy {
   protected showExportMenu = signal(false);
   protected copiedId = signal<string | null>(null);
 
-  private lastTranslatedText = '';
+  // FIFO of finalized STT sentences awaiting translation, drained one at a time
+  // so a burst (e.g. several sentences from one utterance) is translated in
+  // order without overlapping calls — never via the manual input box.
+  private sttQueue: string[] = [];
+  private draining = false;
 
   @ViewChild('historyContainer') historyContainer!: ElementRef<HTMLDivElement>;
 
   constructor() {
-    // Finalized STT segment → translate directly, never touch the manual input box
+    // New finalized sentence(s) available → pull them all and queue for translation.
     effect(() => {
-      const final = this.transcription.lastFinalText();
-      if (!final || final === this.lastTranslatedText) return;
+      this.transcription.finalVersion();
       untracked(() => {
-        this.lastTranslatedText = final;
-        this.runTranslation(final);
+        const sentences = this.transcription.takePending();
+        if (sentences.length === 0) return;
+        this.sttQueue.push(...sentences);
+        this.drainSttQueue();
       });
     });
 
@@ -79,6 +84,19 @@ export class TranslatorComponent implements OnInit, OnDestroy {
       await this.translation.translate(text);
     } catch (err: unknown) {
       this.error.set(err instanceof Error ? err.message : 'Translation failed');
+    }
+  }
+
+  // Translate queued STT sentences sequentially → one history row each, in order.
+  private async drainSttQueue(): Promise<void> {
+    if (this.draining) return;
+    this.draining = true;
+    try {
+      while (this.sttQueue.length > 0) {
+        await this.runTranslation(this.sttQueue.shift()!);
+      }
+    } finally {
+      this.draining = false;
     }
   }
 
