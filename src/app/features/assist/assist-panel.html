@@ -1,0 +1,101 @@
+@if (assist.isOpen()) {
+  <div class="assist-backdrop" (click)="close()"></div>
+
+  <aside class="assist-panel">
+    <!-- ── Header ─────────────────────────────────────────────────────────── -->
+    <header class="assist-header">
+      <span class="assist-title">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+        Assist
+      </span>
+      <div class="assist-header-actions">
+        @if (assist.messages().length > 0) {
+          <button class="assist-icon-btn" (click)="assist.reset()" title="New thread">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 12a9 9 0 1 0 9-9 9 9 0 0 0-6.7 3"/><path d="M3 3v6h6"/>
+            </svg>
+          </button>
+        }
+        <button class="assist-icon-btn" (click)="close()" title="Close">✕</button>
+      </div>
+    </header>
+
+    <!-- ── Context chip ───────────────────────────────────────────────────── -->
+    @if (assist.context(); as ctx) {
+      <div class="assist-context">
+        <button class="context-toggle" (click)="showContext.set(!showContext())">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               [style.transform]="showContext() ? 'rotate(90deg)' : 'none'">
+            <path d="M9 18l6-6-6-6"/>
+          </svg>
+          Context from selected rows
+        </button>
+        @if (showContext()) {
+          <pre class="context-body">{{ ctx }}</pre>
+        }
+      </div>
+    }
+
+    <!-- ── Thread ─────────────────────────────────────────────────────────── -->
+    <div class="assist-thread" #thread>
+      @if (assist.messages().length === 0 && !assist.streaming()) {
+        <div class="assist-quick">
+          <p class="quick-hint">Ask about the selected conversation:</p>
+          <div class="quick-actions">
+            @for (qa of quickActions; track qa.label) {
+              <button class="quick-btn" [disabled]="assist.isAsking()" (click)="runQuick(qa.prompt)">
+                {{ qa.label }}
+              </button>
+            }
+          </div>
+        </div>
+      }
+
+      @for (msg of assist.messages(); track $index) {
+        <div class="msg" [class.msg-user]="msg.role === 'user'" [class.msg-assistant]="msg.role === 'assistant'">
+          <p class="msg-text">{{ msg.content }}</p>
+        </div>
+      }
+
+      @if (assist.streaming()) {
+        <div class="msg msg-assistant">
+          <p class="msg-text">{{ assist.streaming() }}<span class="cursor-blink">▋</span></p>
+        </div>
+      } @else if (assist.isAsking()) {
+        <div class="msg msg-assistant">
+          <span class="thinking-dots"><span></span><span></span><span></span></span>
+        </div>
+      }
+    </div>
+
+    <!-- ── Error ──────────────────────────────────────────────────────────── -->
+    @if (assist.error()) {
+      <div class="assist-error">
+        {{ assist.error() }}
+        <button class="error-close" (click)="assist.error.set(null)">✕</button>
+      </div>
+    }
+
+    <!-- ── Input ──────────────────────────────────────────────────────────── -->
+    <div class="assist-input">
+      <textarea
+        class="assist-textarea"
+        placeholder="Ask a follow-up…"
+        rows="2"
+        [(ngModel)]="question"
+        (keydown.enter)="$event.preventDefault(); send()">
+      </textarea>
+      <button class="assist-send" [disabled]="assist.isAsking() || !question.trim()" (click)="send()">
+        @if (assist.isAsking()) {
+          <span class="spinner-sm"></span>
+        } @else {
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
+          </svg>
+        }
+      </button>
+    </div>
+  </aside>
+}

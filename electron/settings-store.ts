@@ -17,6 +17,12 @@ export interface AppSettings {
     apiKey: string;
     language: string;
   };
+  // Assist mode reuses the matching translation provider's API key; only the
+  // provider choice and model live here.
+  assist: {
+    provider: string;
+    model: string;
+  };
   audio: {
     selectedSourceId: string | null;
   };
@@ -41,6 +47,10 @@ const defaults: AppSettings = {
     provider: 'deepgram',
     apiKey: '',
     language: 'en',
+  },
+  assist: {
+    provider: 'claude',
+    model: 'claude-sonnet-4-6',
   },
   audio: {
     selectedSourceId: null,

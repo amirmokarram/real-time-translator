@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import {
   AppSettings,
+  AssistMessage,
   AudioSource,
   ElectronAPI,
   ProviderMeta,
@@ -18,6 +19,7 @@ const mockSettings: AppSettings = {
     libretranslate: { endpoint: 'https://libretranslate.com' },
   },
   stt: { provider: 'deepgram', apiKey: '', language: 'en' },
+  assist: { provider: 'claude', model: 'claude-sonnet-4-6' },
   audio: { selectedSourceId: null },
   display: { fontSize: 16, showInterimResults: true, historyLength: 50 },
 };
@@ -77,6 +79,21 @@ export class ElectronBridgeService {
       provider: 'mock',
       processingTimeMs: 0,
     });
+  }
+
+  assist(payload: { messages: AssistMessage[]; context?: string }): Promise<string> {
+    if (this.api) return this.api.assist(payload);
+    // Browser mock: echo the last question
+    const last = payload.messages[payload.messages.length - 1]?.content ?? '';
+    return Promise.resolve(`[Mock assist] You asked: ${last}`);
+  }
+
+  onAssistChunk(cb: (chunk: string) => void): () => void {
+    return this.api?.onAssistChunk(cb) ?? (() => {});
+  }
+
+  onAssistComplete(cb: (text: string) => void): () => void {
+    return this.api?.onAssistComplete(cb) ?? (() => {});
   }
 
   validateProvider(providerId: string): Promise<{ valid: boolean; error?: string }> {

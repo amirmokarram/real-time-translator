@@ -5,9 +5,12 @@ import { AudioCapture } from './audio-capture';
 import { OverlayManager } from './overlay-window';
 import { ProviderRegistry } from './translation/provider-registry';
 import { TranslationRequest } from './translation/provider.interface';
+import { AssistRegistry } from './assist/assist-registry';
+import { AssistMessage } from './assist/assist.interface';
 
 const audioCapture = new AudioCapture();
 const registry = new ProviderRegistry();
+const assistRegistry = new AssistRegistry();
 
 export function registerIpcHandlers(
   ipcMain: IpcMain,
@@ -77,6 +80,28 @@ export function registerIpcHandlers(
     const provider = registry.get(providerId);
     if (!provider) return { valid: false, error: 'Unknown provider' };
     return provider.validate(providerSettings);
+  });
+
+  // ── Assist (LLM Q&A about the conversation) ──────────────────────────────────
+  // Streamed to the calling window only (not broadcast — the overlay has no chat).
+  // Reuses the matching translation provider's API key; model comes from settings.assist.
+  ipcMain.handle('assist:ask', async (event, payload: unknown) => {
+    const { messages, context } = payload as { messages: AssistMessage[]; context?: string };
+    const settings = settingsStore.get();
+    const assistCfg = settings.assist;
+    const provider = assistRegistry.get(assistCfg.provider);
+    if (!provider) throw new Error(`Unknown assist provider: ${assistCfg.provider}`);
+
+    const apiKey = settings.providers[assistCfg.provider]?.apiKey;
+    const onChunk = (chunk: string) => event.sender.send('assist:chunk', chunk);
+
+    const full = await provider.ask(
+      { messages, context },
+      { apiKey, model: assistCfg.model },
+      onChunk
+    );
+    event.sender.send('assist:complete', full);
+    return full;
   });
 
   // ── Export history to file ──────────────────────────────────────────────────

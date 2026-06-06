@@ -20,6 +20,8 @@
   flex: 1;
   min-height: 0;
   overflow: hidden;
+  // Containing block for the absolutely-positioned assist slide-in panel.
+  position: relative;
 }
 
 // ── Column headers ────────────────────────────────────────────────────────────
@@ -127,8 +129,19 @@
   flex-shrink: 0;
   border-top: 1px solid var(--border);
   animation: fadeUp 0.2s ease-out;
+  cursor: pointer;
+  // user-select:none so shift-click extends the row range instead of selecting text
+  user-select: none;
+  transition: background 0.12s ease;
 
   &:first-of-type { border-top: none; }
+
+  &:hover { background: var(--surface-hover); }
+
+  &.selected {
+    background: var(--primary-muted);
+    box-shadow: inset 3px 0 0 var(--primary);
+  }
 }
 
 @keyframes fadeUp {
@@ -204,6 +217,67 @@
 
 .history-row:hover .copy-btn {
   opacity: 1;
+}
+
+// ── Selection bar ─────────────────────────────────────────────────────────────
+
+.selection-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 7px 14px;
+  flex-shrink: 0;
+  border-top: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface-elevated) 88%, var(--primary) 12%);
+  animation: fadeUp 0.15s ease-out;
+}
+
+.selection-count {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--primary);
+  white-space: nowrap;
+}
+
+.selection-actions {
+  display: flex;
+  gap: 6px;
+  flex: 1;
+}
+
+.ask-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 16px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--primary);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.12s;
+
+  &:hover { background: var(--primary-hover); }
+}
+
+.sel-clear {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 12px;
+  transition: color 0.12s, background 0.12s;
+
+  &:hover { color: var(--text-primary); background: var(--surface-hover); }
 }
 
 // ── Error banners ─────────────────────────────────────────────────────────────

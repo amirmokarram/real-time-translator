@@ -8,12 +8,14 @@ import { AudioService } from '../../core/services/audio.service';
 import { TranscriptionService } from '../../core/services/transcription.service';
 import { SettingsService } from '../../core/services/settings.service';
 import { ExportService, ExportFormat } from '../../core/services/export.service';
+import { AssistService } from '../../core/services/assist.service';
+import { AssistPanelComponent } from '../assist/assist-panel';
 import { TranslationEntry } from '../../core/models/app.models';
 
 @Component({
   selector: 'app-translator',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, AssistPanelComponent],
   templateUrl: './translator.html',
   styleUrl: './translator.scss',
 })
@@ -22,12 +24,19 @@ export class TranslatorComponent implements OnInit, OnDestroy {
   protected audio = inject(AudioService);
   protected transcription = inject(TranscriptionService);
   protected settings = inject(SettingsService);
+  protected assist = inject(AssistService);
   private exportSvc = inject(ExportService);
 
   protected inputText = '';
   protected error = signal<string | null>(null);
   protected showExportMenu = signal(false);
   protected copiedId = signal<string | null>(null);
+
+  // ── Row selection (powers multi-row copy; later feeds Ask-LLM) ──────────────
+  // Set of selected entry ids. Click toggles a row; shift-click extends a range
+  // from the last-clicked row, using the current history() order as the index.
+  protected selectedIds = signal<Set<string>>(new Set());
+  private lastClickedId: string | null = null;
 
   // FIFO of finalized STT sentences awaiting translation, drained one at a time
   // so a burst (e.g. several sentences from one utterance) is translated in
@@ -111,6 +120,59 @@ export class TranslatorComponent implements OnInit, OnDestroy {
     } catch {
       this.error.set('Could not copy to clipboard');
     }
+  }
+
+  // ── Row selection ────────────────────────────────────────────────────────────
+
+  protected isSelected(id: string): boolean {
+    return this.selectedIds().has(id);
+  }
+
+  protected selectedCount(): number {
+    return this.selectedIds().size;
+  }
+
+  // Click a row to toggle it; shift-click to select the contiguous range from
+  // the previously clicked row (inclusive), in current history order.
+  protected toggleRow(entry: TranslationEntry, event: MouseEvent): void {
+    const next = new Set(this.selectedIds());
+
+    if (event.shiftKey && this.lastClickedId) {
+      const rows = this.translation.history();
+      const from = rows.findIndex((e) => e.id === this.lastClickedId);
+      const to = rows.findIndex((e) => e.id === entry.id);
+      if (from !== -1 && to !== -1) {
+        const [lo, hi] = from < to ? [from, to] : [to, from];
+        for (let i = lo; i <= hi; i++) next.add(rows[i].id);
+        this.selectedIds.set(next);
+        return;
+      }
+    }
+
+    if (next.has(entry.id)) next.delete(entry.id);
+    else next.add(entry.id);
+    this.selectedIds.set(next);
+    this.lastClickedId = entry.id;
+  }
+
+  protected clearSelection(): void {
+    this.selectedIds.set(new Set());
+    this.lastClickedId = null;
+  }
+
+  // Open assist mode with the selected rows (in history order) as context.
+  protected askSelected(): void {
+    const ids = this.selectedIds();
+    if (ids.size === 0) return;
+    // English only — the source of truth; the Persian is just a translation.
+    const block = this.translation
+      .history()
+      .filter((e) => ids.has(e.id))
+      .map((e) => e.english)
+      .join('\n');
+
+    this.assist.openWith(block);
+    this.clearSelection();
   }
 
   protected onSourceChange(event: Event): void {

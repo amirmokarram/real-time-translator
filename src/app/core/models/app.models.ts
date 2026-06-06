@@ -29,8 +29,16 @@ export interface AppSettings {
   activeProvider: string;
   providers: Record<string, ProviderSettings>;
   stt: { provider: string; apiKey: string; language: string };
+  assist: { provider: string; model: string };
   audio: { selectedSourceId: string | null };
   display: { fontSize: number; showInterimResults: boolean; historyLength: number };
+}
+
+// ── Assist mode ─────────────────────────────────────────────────────────────
+
+export interface AssistMessage {
+  role: 'user' | 'assistant';
+  content: string;
 }
 
 // ── Audio ─────────────────────────────────────────────────────────────────────
@@ -73,6 +81,7 @@ export interface ElectronAPI {
   startCapture(sourceId: string): Promise<void>;
   stopCapture(): Promise<void>;
   translate(payload: { text: string; providerId: string }): Promise<TranslationResult>;
+  assist(payload: { messages: AssistMessage[]; context?: string }): Promise<string>;
   validateProvider(payload: { providerId: string }): Promise<{ valid: boolean; error?: string }>;
   getAvailableProviders(): Promise<ProviderMeta[]>;
   // Export
@@ -89,6 +98,8 @@ export interface ElectronAPI {
   onTranslationChunk(cb: (chunk: string) => void): () => void;
   onTranslationComplete(cb: (text: string) => void): () => void;
   onTranslationSource(cb: (text: string) => void): () => void;
+  onAssistChunk(cb: (chunk: string) => void): () => void;
+  onAssistComplete(cb: (text: string) => void): () => void;
   onOverlayState(cb: (open: boolean) => void): () => void;
 }
 
