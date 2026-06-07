@@ -13,6 +13,16 @@ const audioCapture = new AudioCapture();
 const registry = new ProviderRegistry();
 const assistRegistry = new AssistRegistry();
 
+// Collapse a run of repeated terminal punctuation (e.g. "؟؟", "??", "؟?", "!!")
+// into a single mark. Some NMT models (notably LibreTranslate/Argos) duplicate
+// the sentence-final question mark when translating questions; this fixes that
+// for every provider. Prefers the Persian "؟" when the run contains one.
+function collapseTerminalPunctuation(text: string): string {
+  return text.replace(/[?!؟](?:\s*[?!؟])+/g, (run) =>
+    run.includes('؟') ? '؟' : run.includes('?') ? '?' : '!'
+  );
+}
+
 export function registerIpcHandlers(
   ipcMain: IpcMain,
   win: BrowserWindow,
@@ -74,6 +84,7 @@ export function registerIpcHandlers(
       : undefined;
 
     const result = await provider.translate(request, providerSettings, onChunk);
+    result.translatedText = collapseTerminalPunctuation(result.translatedText);
     broadcast('translation:complete', result.translatedText);
     return result;
   });
