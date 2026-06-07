@@ -1,6 +1,6 @@
 # Real-Time Translator — Memory Index
 
-Desktop app: real-time English→Persian translation of system audio (meetings/video). Angular 21 + Electron 42. Core pipeline (capture → DeepGram STT → switchable translation → live display) + overlay + export all working (built 2026-06-04). **Assist mode** (LLM Q&A about the conversation, 4 providers incl. local Ollama/Docker Model Runner) added 2026-06-07 on branch `feature/assist-mode`.
+Desktop app: real-time English→Persian translation of system audio (meetings/video). Angular 21 + Electron 42. Core pipeline (capture → DeepGram STT → switchable translation → live display) + overlay + export all working (built 2026-06-04). **Assist mode** (LLM Q&A about the conversation, 4 providers incl. local Ollama/Docker Model Runner) added 2026-06-07, merged to `main`. **Published 2026-06-07** as public GitHub repo https://github.com/amirmokarram/real-time-translator — **All Rights Reserved / proprietary** (LICENSE + `UNLICENSED` in package.json), README rewritten with full docs.
 
 - [Collaboration & Environment](collaboration-and-env.md) — how Amir works (plan-first, phase-by-phase), Windows/PowerShell, Node 24.13, project paths
 - [Project Architecture](project-architecture.md) — Angular+Electron split, IPC bridge, subsystems map, broadcast pattern, build commands, TS isolation
