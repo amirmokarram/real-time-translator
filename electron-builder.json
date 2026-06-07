@@ -4,6 +4,14 @@
   "directories": {
     "output": "release"
   },
+  "publish": [
+    {
+      "provider": "github",
+      "owner": "amirmokarram",
+      "repo": "real-time-translator",
+      "releaseType": "draft"
+    }
+  ],
   "files": [
     "dist/**/*",
     "dist-electron/**/*",
