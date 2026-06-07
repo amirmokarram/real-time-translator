@@ -59,13 +59,17 @@
 
       @for (msg of assist.messages(); track $index) {
         <div class="msg" [class.msg-user]="msg.role === 'user'" [class.msg-assistant]="msg.role === 'assistant'">
-          <p class="msg-text">{{ msg.content }}</p>
+          @if (msg.role === 'assistant') {
+            <div class="msg-text markdown" [innerHTML]="msg.content | markdown"></div>
+          } @else {
+            <p class="msg-text">{{ msg.content }}</p>
+          }
         </div>
       }
 
       @if (assist.streaming()) {
         <div class="msg msg-assistant">
-          <p class="msg-text">{{ assist.streaming() }}<span class="cursor-blink">▋</span></p>
+          <div class="msg-text markdown" [innerHTML]="assist.streaming() | markdown"></div>
         </div>
       } @else if (assist.isAsking()) {
         <div class="msg msg-assistant">

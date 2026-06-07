@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, session } from 'electron';
+import { app, BrowserWindow, ipcMain, session, shell } from 'electron';
 import * as path from 'path';
 import { registerIpcHandlers } from './ipc-handlers';
 import { SettingsStore } from './settings-store';
@@ -14,6 +14,23 @@ const overlayManager = new OverlayManager(isDev, (open) => {
     mainWindow.webContents.send('overlay:state', open);
   }
 });
+
+// Route all external (http/https) links to the system browser instead of
+// navigating the app window in-place (which would break the SPA). Covers both
+// window.open / target=_blank and direct in-place navigations.
+function openLinksExternally(contents: Electron.WebContents): void {
+  contents.setWindowOpenHandler(({ url }) => {
+    if (/^https?:\/\//.test(url)) void shell.openExternal(url);
+    return { action: 'deny' };
+  });
+  contents.on('will-navigate', (event, url) => {
+    // Allow the app's own load (dev server); send everything else to the browser.
+    if (/^https?:\/\//.test(url) && !url.startsWith('http://localhost:4200')) {
+      event.preventDefault();
+      void shell.openExternal(url);
+    }
+  });
+}
 
 function createMainWindow(): void {
   mainWindow = new BrowserWindow({
@@ -40,6 +57,8 @@ function createMainWindow(): void {
       path.join(__dirname, '../dist/renderer/browser/index.html')
     );
   }
+
+  openLinksExternally(mainWindow.webContents);
 
   mainWindow.on('closed', () => {
     mainWindow = null;

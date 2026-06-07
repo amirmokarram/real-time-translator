@@ -4,11 +4,12 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { AssistService } from '../../core/services/assist.service';
+import { MarkdownPipe } from '../../shared/markdown.pipe';
 
 @Component({
   selector: 'app-assist-panel',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, MarkdownPipe],
   templateUrl: './assist-panel.html',
   styleUrl: './assist-panel.scss',
 })
@@ -20,11 +21,12 @@ export class AssistPanelComponent {
 
   @ViewChild('thread') thread!: ElementRef<HTMLDivElement>;
 
-  // Quick-action prompts that prefill + send against the selected context.
+  // Quick-action prompts (sent as user messages under the single assist system
+  // prompt) tuned for the interview flow against the selected context.
   protected readonly quickActions = [
-    { label: 'Summarize', prompt: 'Summarize this part of the conversation.' },
-    { label: 'Explain', prompt: 'Explain what this means in simple terms.' },
-    { label: 'Key terms', prompt: 'List and briefly define the key terms used here.' },
+    { label: 'Explain', prompt: "Explain what the interviewer is asking and define the key terms. Don't answer yet." },
+    { label: 'Answer', prompt: 'Give me a natural, first-person answer I can say out loud.' },
+    { label: 'Key terms', prompt: 'Define the technical terms here simply.' },
   ];
 
   constructor() {
