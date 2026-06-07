@@ -81,8 +81,9 @@
                     @if (field.type === 'select') {
                       <select
                         class="field-select"
-                        [value]="getFieldValue(p.id, field.key)"
-                        (change)="setField(p.id, field.key, $any($event.target).value)">
+                        [ngModel]="getFieldValue(p.id, field.key)"
+                        (ngModelChange)="setField(p.id, field.key, $event)"
+                        [ngModelOptions]="{ standalone: true }">
                         @for (opt of field.options; track opt.value) {
                           <option [value]="opt.value">{{ opt.label }}</option>
                         }
@@ -242,8 +243,9 @@
               <label class="field-label">Provider</label>
               <select
                 class="field-select"
-                [value]="assistProvider()"
-                (change)="onAssistProviderChange($any($event.target).value)">
+                [ngModel]="assistProvider()"
+                (ngModelChange)="onAssistProviderChange($event)"
+                [ngModelOptions]="{ standalone: true }">
                 @for (id of assistProviderIds; track id) {
                   <option [value]="id">{{ assistProviderName(id) }}</option>
                 }
@@ -264,8 +266,9 @@
               } @else {
                 <select
                   class="field-select"
-                  [value]="assistModel()"
-                  (change)="assistModel.set($any($event.target).value)">
+                  [ngModel]="assistModel()"
+                  (ngModelChange)="assistModel.set($event)"
+                  [ngModelOptions]="{ standalone: true }">
                   @for (opt of assistModelOptions(); track opt.value) {
                     <option [value]="opt.value">{{ opt.label }}</option>
                   }
@@ -320,10 +323,34 @@
               <button class="btn-save" [disabled]="assistSaving()" (click)="saveAssist()">
                 @if (assistSaving()) { Saving… } @else { Save }
               </button>
+
+              <button
+                class="btn-test"
+                [disabled]="assistValidating() || (assistKeyMissing() && !isLocalAssist())"
+                (click)="testAssist()">
+                @if (assistValidating()) {
+                  <span class="spinner-xs"></span> Testing…
+                } @else {
+                  Test Connection
+                }
+              </button>
+
               @if (assistSaved()) {
                 <div class="validation-result valid">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
                   Saved
+                </div>
+              }
+
+              @if (assistValidResult(); as result) {
+                <div class="validation-result" [class.valid]="result.valid" [class.invalid]="!result.valid">
+                  @if (result.valid) {
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                    Connected — assist is ready
+                  } @else {
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    {{ result.error ?? 'Failed' }}
+                  }
                 </div>
               }
             </div>

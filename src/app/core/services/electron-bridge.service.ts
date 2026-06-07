@@ -88,6 +88,10 @@ export class ElectronBridgeService {
     return Promise.resolve(`[Mock assist] You asked: ${last}`);
   }
 
+  validateAssist(): Promise<{ valid: boolean; error?: string }> {
+    return this.api?.validateAssist() ?? Promise.resolve({ valid: true });
+  }
+
   onAssistChunk(cb: (chunk: string) => void): () => void {
     return this.api?.onAssistChunk(cb) ?? (() => {});
   }

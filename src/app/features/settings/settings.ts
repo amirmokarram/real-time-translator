@@ -40,6 +40,8 @@ export class SettingsComponent implements OnInit {
   protected assistEndpoint = signal('http://localhost:11434');
   protected assistSaving = signal(false);
   protected assistSaved = signal(false);
+  protected assistValidating = signal(false);
+  protected assistValidResult = signal<{ valid: boolean; error?: string } | null>(null);
 
   // STT (DeepGram)
   protected sttApiKey = signal('');
@@ -104,6 +106,7 @@ export class SettingsComponent implements OnInit {
     // Seed the endpoint with the new local provider's sensible default.
     if (isLocal) this.assistEndpoint.set(this.assistEndpointDefaults[id]);
     this.assistSaved.set(false);
+    this.assistValidResult.set(null);
   }
 
   // Cloud assist reuses the chosen provider's translation API key — warn if it's
@@ -132,6 +135,26 @@ export class SettingsComponent implements OnInit {
       setTimeout(() => this.assistSaved.set(false), 2000);
     } finally {
       this.assistSaving.set(false);
+    }
+  }
+
+  // Persist the form, then run a minimal call through the provider to confirm it
+  // works (valid key for cloud; reachable server + present model for local).
+  protected async testAssist(): Promise<void> {
+    this.assistValidating.set(true);
+    this.assistValidResult.set(null);
+    try {
+      await this.settingsSvc.updateAssist({
+        provider: this.assistProvider(),
+        model: this.assistModel(),
+        endpoint: this.assistEndpoint(),
+      });
+      const result = await this.bridge.validateAssist();
+      this.assistValidResult.set(result);
+    } catch (err: unknown) {
+      this.assistValidResult.set({ valid: false, error: err instanceof Error ? err.message : String(err) });
+    } finally {
+      this.assistValidating.set(false);
     }
   }
 

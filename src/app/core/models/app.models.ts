@@ -82,6 +82,7 @@ export interface ElectronAPI {
   stopCapture(): Promise<void>;
   translate(payload: { text: string; providerId: string }): Promise<TranslationResult>;
   assist(payload: { messages: AssistMessage[]; context?: string }): Promise<string>;
+  validateAssist(): Promise<{ valid: boolean; error?: string }>;
   validateProvider(payload: { providerId: string }): Promise<{ valid: boolean; error?: string }>;
   getAvailableProviders(): Promise<ProviderMeta[]>;
   // Export

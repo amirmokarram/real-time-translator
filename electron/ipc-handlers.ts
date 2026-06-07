@@ -104,6 +104,26 @@ export function registerIpcHandlers(
     return full;
   });
 
+  // Verify the configured assist provider works: a minimal non-streaming call.
+  // Reads saved settings, so the renderer should persist the form first.
+  ipcMain.handle('assist:validate', async () => {
+    const settings = settingsStore.get();
+    const assistCfg = settings.assist;
+    const provider = assistRegistry.get(assistCfg.provider);
+    if (!provider) return { valid: false, error: `Unknown assist provider: ${assistCfg.provider}` };
+
+    const apiKey = settings.providers[assistCfg.provider]?.apiKey;
+    try {
+      await provider.ask(
+        { messages: [{ role: 'user', content: 'ping' }] },
+        { apiKey, model: assistCfg.model, endpoint: assistCfg.endpoint }
+      );
+      return { valid: true };
+    } catch (err: unknown) {
+      return { valid: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  });
+
   // ── Export history to file ──────────────────────────────────────────────────
   ipcMain.handle('export:save', async (_event, payload: unknown) => {
     const { content, defaultName } = payload as { content: string; defaultName: string };
