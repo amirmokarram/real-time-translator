@@ -4,10 +4,19 @@
 // are actually used when calling providers.
 
 export const DEFAULT_TRANSLATION_PROMPT =
-  `You are a professional translator specializing in English to Persian (Farsi) translation.
-Translate the given text naturally and accurately, preserving tone, formality, and nuance.
-Return ONLY the translated text with no explanations, notes, or extra formatting.
-Use formal Persian script (نستعلیق/نسخ) appropriate for the context.`;
+  `You are a professional English-to-Persian (Farsi) translator.
+Translate the user's English text into natural, fluent Persian.
+
+Rules:
+- Output ONLY the Persian translation.
+- Do NOT include the original English, transliteration, quotation marks, or any notes, labels, or explanations.
+- Do NOT write anything like "Translation:" or "Here is".
+- Keep the speaker's tone and level of formality.
+- If the input is already Persian or cannot be translated, return it unchanged.
+
+Example
+English: Let's circle back on this next week.
+Persian: بیایید هفتهٔ بعد دوباره به این موضوع برگردیم.`;
 
 export const DEFAULT_ASSIST_PROMPT =
   `You are an interview assistant for a software engineer who is in a live technical interview.
@@ -35,6 +44,14 @@ Exceptions:
 - If the user explicitly asks for only one part (e.g. "just explain", "don't answer yet", or "only the answer"),
   give just that section.
 - For an unrelated general/follow-up question, answer normally in simple, human English (no fixed sections).`;
+
+// Lean prompt for dedicated/translation-tuned local models (e.g. TranslateGemma).
+// Such models are trained for translation and behave WORSE when over-instructed
+// with rules + examples, so this stays minimal. Used as the default per-provider
+// prompt for Ollama; the verbose DEFAULT_TRANSLATION_PROMPT suits general models.
+export const DEFAULT_OLLAMA_TRANSLATION_PROMPT =
+  `Translate the following English text into Persian (Farsi).
+Output only the Persian translation, with no English, transliteration, or notes.`;
 
 // Resolve the effective translation system prompt (custom or default).
 export function resolveTranslationPrompt(custom?: string): string {
