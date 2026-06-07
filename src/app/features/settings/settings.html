@@ -252,15 +252,62 @@
 
             <div class="field-group">
               <label class="field-label">Model</label>
-              <select
-                class="field-select"
-                [value]="assistModel()"
-                (change)="assistModel.set($any($event.target).value)">
-                @for (opt of assistModelOptions(); track opt.value) {
-                  <option [value]="opt.value">{{ opt.label }}</option>
-                }
-              </select>
+              @if (isLocalAssist()) {
+                <input
+                  class="field-input"
+                  type="text"
+                  [placeholder]="isOpenAICompatible() ? 'e.g. ai/llama3.2' : 'e.g. llama3.2'"
+                  [value]="assistModel()"
+                  (input)="assistModel.set($any($event.target).value)"
+                  autocomplete="off"
+                  spellcheck="false">
+              } @else {
+                <select
+                  class="field-select"
+                  [value]="assistModel()"
+                  (change)="assistModel.set($any($event.target).value)">
+                  @for (opt of assistModelOptions(); track opt.value) {
+                    <option [value]="opt.value">{{ opt.label }}</option>
+                  }
+                </select>
+              }
             </div>
+
+            @if (isLocalAssist()) {
+              <div class="field-group">
+                <label class="field-label">Server endpoint</label>
+                <input
+                  class="field-input"
+                  type="text"
+                  [placeholder]="isOpenAICompatible() ? 'http://localhost:12434/engines/v1' : 'http://localhost:11434'"
+                  [value]="assistEndpoint()"
+                  (input)="assistEndpoint.set($any($event.target).value)"
+                  autocomplete="off"
+                  spellcheck="false">
+              </div>
+            }
+
+            @if (isOllama()) {
+              <div class="stt-steps">
+                <p class="stt-steps-title">Running Ollama locally:</p>
+                <ol>
+                  <li>Install from <strong>ollama.com</strong>, then start it (<strong>ollama serve</strong>)</li>
+                  <li>Pull a model: <strong>ollama pull llama3.2</strong></li>
+                  <li>Enter that model name above → Save. No API key or internet needed.</li>
+                </ol>
+              </div>
+            }
+
+            @if (isOpenAICompatible()) {
+              <div class="stt-steps">
+                <p class="stt-steps-title">Using Docker Model Runner (or any OpenAI-compatible server):</p>
+                <ol>
+                  <li>In Docker Desktop → <strong>Settings → AI / Model Runner</strong>, enable it and <strong>host-side TCP</strong> (default port 12434)</li>
+                  <li>Pull a model: <strong>docker model pull ai/llama3.2</strong></li>
+                  <li>Enter that model name above and the endpoint → Save. Also works with LM Studio, vLLM, llama.cpp, LocalAI.</li>
+                </ol>
+              </div>
+            }
 
             @if (assistKeyMissing()) {
               <div class="validation-result invalid">

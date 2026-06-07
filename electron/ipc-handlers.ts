@@ -97,7 +97,7 @@ export function registerIpcHandlers(
 
     const full = await provider.ask(
       { messages, context },
-      { apiKey, model: assistCfg.model },
+      { apiKey, model: assistCfg.model, endpoint: assistCfg.endpoint },
       onChunk
     );
     event.sender.send('assist:complete', full);

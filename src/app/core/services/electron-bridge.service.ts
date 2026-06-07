@@ -19,7 +19,7 @@ const mockSettings: AppSettings = {
     libretranslate: { endpoint: 'https://libretranslate.com' },
   },
   stt: { provider: 'deepgram', apiKey: '', language: 'en' },
-  assist: { provider: 'claude', model: 'claude-sonnet-4-6' },
+  assist: { provider: 'claude', model: 'claude-sonnet-4-6', endpoint: 'http://localhost:11434' },
   audio: { selectedSourceId: null },
   display: { fontSize: 16, showInterimResults: true, historyLength: 50 },
 };

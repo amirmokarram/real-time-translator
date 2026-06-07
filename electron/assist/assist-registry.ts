@@ -1,14 +1,21 @@
 import { IAssistProvider } from './assist.interface';
 import { ClaudeAssistProvider } from './providers/claude-assist.provider';
 import { OpenAIAssistProvider } from './providers/openai-assist.provider';
+import { OllamaAssistProvider } from './providers/ollama-assist.provider';
+import { OpenAICompatibleAssistProvider } from './providers/openai-compatible-assist.provider';
 
-// Only cloud LLM providers can power assist mode. (Ollama can be added here
-// later as an offline option without touching the rest of the pipeline.)
+// Cloud providers (Claude, OpenAI) plus local/offline options: Ollama and any
+// OpenAI-compatible server (Docker Model Runner, LM Studio, vLLM, llama.cpp…).
 export class AssistRegistry {
   private providers = new Map<string, IAssistProvider>();
 
   constructor() {
-    for (const p of [new ClaudeAssistProvider(), new OpenAIAssistProvider()]) {
+    for (const p of [
+      new ClaudeAssistProvider(),
+      new OpenAIAssistProvider(),
+      new OllamaAssistProvider(),
+      new OpenAICompatibleAssistProvider(),
+    ]) {
       this.providers.set(p.id, p);
     }
   }

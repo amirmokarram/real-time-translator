@@ -17,9 +17,11 @@ export interface AssistRequest {
 
 // Credentials/model for one assist call. apiKey is reused from the matching
 // translation provider's settings; model is the assist-specific choice.
+// endpoint is only used by local providers (Ollama).
 export interface AssistProviderSettings {
   apiKey?: string;
   model?: string;
+  endpoint?: string;
 }
 
 export interface IAssistProvider {

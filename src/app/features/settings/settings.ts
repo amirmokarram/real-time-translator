@@ -27,10 +27,17 @@ export class SettingsComponent implements OnInit {
   protected saving = signal(false);
   protected saveSuccess = signal(false);
 
-  // Assist mode — only cloud LLM providers can power it.
-  protected readonly assistProviderIds = ['claude', 'openai'];
+  // Assist mode — cloud LLMs plus local/offline options.
+  protected readonly assistProviderIds = ['claude', 'openai', 'ollama', 'openai-compatible'];
+  // Providers that run locally: free-text model + a server endpoint, no API key.
+  private readonly localAssistProviders = ['ollama', 'openai-compatible'];
+  private readonly assistEndpointDefaults: Record<string, string> = {
+    ollama: 'http://localhost:11434',
+    'openai-compatible': 'http://localhost:12434/engines/v1',
+  };
   protected assistProvider = signal('claude');
   protected assistModel = signal('');
+  protected assistEndpoint = signal('http://localhost:11434');
   protected assistSaving = signal(false);
   protected assistSaved = signal(false);
 
@@ -64,6 +71,7 @@ export class SettingsComponent implements OnInit {
 
     this.assistProvider.set(settings?.assist.provider ?? 'claude');
     this.assistModel.set(settings?.assist.model ?? '');
+    this.assistEndpoint.set(settings?.assist.endpoint ?? 'http://localhost:11434');
   }
 
   // ── Assist ──────────────────────────────────────────────────────────────────
@@ -75,20 +83,40 @@ export class SettingsComponent implements OnInit {
     return meta?.configFields.find((f) => f.key === 'model')?.options ?? [];
   }
 
+  protected isLocalAssist(): boolean {
+    return this.localAssistProviders.includes(this.assistProvider());
+  }
+
+  protected isOllama(): boolean {
+    return this.assistProvider() === 'ollama';
+  }
+
+  protected isOpenAICompatible(): boolean {
+    return this.assistProvider() === 'openai-compatible';
+  }
+
   protected onAssistProviderChange(id: string): void {
     this.assistProvider.set(id);
-    // Reset the model to the new provider's first option.
-    this.assistModel.set(this.assistModelOptions()[0]?.value ?? '');
+    const isLocal = this.localAssistProviders.includes(id);
+    // Cloud providers have a fixed model list — default to the first option.
+    // Local models are free-text (whatever the user pulled), so leave blank.
+    this.assistModel.set(isLocal ? '' : this.assistModelOptions()[0]?.value ?? '');
+    // Seed the endpoint with the new local provider's sensible default.
+    if (isLocal) this.assistEndpoint.set(this.assistEndpointDefaults[id]);
     this.assistSaved.set(false);
   }
 
-  // Assist reuses the chosen provider's translation API key — warn if it's blank.
+  // Cloud assist reuses the chosen provider's translation API key — warn if it's
+  // blank. Local providers need no key, so this never applies to them.
   protected assistKeyMissing(): boolean {
+    if (this.isLocalAssist()) return false;
     const key = this.settingsSvc.settings()?.providers[this.assistProvider()]?.apiKey;
     return !key?.trim();
   }
 
   protected assistProviderName(id: string): string {
+    if (id === 'ollama') return 'Ollama (Local)';
+    if (id === 'openai-compatible') return 'OpenAI-compatible (Local)';
     return this.settingsSvc.providerMeta(id)?.name ?? id;
   }
 
@@ -98,6 +126,7 @@ export class SettingsComponent implements OnInit {
       await this.settingsSvc.updateAssist({
         provider: this.assistProvider(),
         model: this.assistModel(),
+        endpoint: this.assistEndpoint(),
       });
       this.assistSaved.set(true);
       setTimeout(() => this.assistSaved.set(false), 2000);

@@ -29,7 +29,7 @@ export interface AppSettings {
   activeProvider: string;
   providers: Record<string, ProviderSettings>;
   stt: { provider: string; apiKey: string; language: string };
-  assist: { provider: string; model: string };
+  assist: { provider: string; model: string; endpoint: string };
   audio: { selectedSourceId: string | null };
   display: { fontSize: number; showInterimResults: boolean; historyLength: number };
 }

@@ -18,10 +18,11 @@ export interface AppSettings {
     language: string;
   };
   // Assist mode reuses the matching translation provider's API key; only the
-  // provider choice and model live here.
+  // provider choice and model live here. endpoint is used by Ollama (local).
   assist: {
     provider: string;
     model: string;
+    endpoint: string;
   };
   audio: {
     selectedSourceId: string | null;
@@ -51,6 +52,7 @@ const defaults: AppSettings = {
   assist: {
     provider: 'claude',
     model: 'claude-sonnet-4-6',
+    endpoint: 'http://localhost:11434',
   },
   audio: {
     selectedSourceId: null,
