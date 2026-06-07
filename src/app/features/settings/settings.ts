@@ -23,9 +23,16 @@ export class SettingsComponent implements OnInit {
   protected bridge = inject(ElectronBridgeService);
 
   protected providerStates = signal<Record<string, ProviderFormState>>({});
-  protected activeTab = signal<'translation' | 'stt' | 'display'>('translation');
+  protected activeTab = signal<'translation' | 'stt' | 'assist' | 'display'>('translation');
   protected saving = signal(false);
   protected saveSuccess = signal(false);
+
+  // Assist mode — only cloud LLM providers can power it.
+  protected readonly assistProviderIds = ['claude', 'openai'];
+  protected assistProvider = signal('claude');
+  protected assistModel = signal('');
+  protected assistSaving = signal(false);
+  protected assistSaved = signal(false);
 
   // STT (DeepGram)
   protected sttApiKey = signal('');
@@ -54,6 +61,49 @@ export class SettingsComponent implements OnInit {
 
     this.providerStates.set(states);
     this.sttApiKey.set(settings?.stt.apiKey ?? '');
+
+    this.assistProvider.set(settings?.assist.provider ?? 'claude');
+    this.assistModel.set(settings?.assist.model ?? '');
+  }
+
+  // ── Assist ──────────────────────────────────────────────────────────────────
+
+  // Model choices come from the matching translation provider's metadata, so the
+  // assist model list stays in sync with the provider definitions.
+  protected assistModelOptions(): { value: string; label: string }[] {
+    const meta = this.settingsSvc.providerMeta(this.assistProvider());
+    return meta?.configFields.find((f) => f.key === 'model')?.options ?? [];
+  }
+
+  protected onAssistProviderChange(id: string): void {
+    this.assistProvider.set(id);
+    // Reset the model to the new provider's first option.
+    this.assistModel.set(this.assistModelOptions()[0]?.value ?? '');
+    this.assistSaved.set(false);
+  }
+
+  // Assist reuses the chosen provider's translation API key — warn if it's blank.
+  protected assistKeyMissing(): boolean {
+    const key = this.settingsSvc.settings()?.providers[this.assistProvider()]?.apiKey;
+    return !key?.trim();
+  }
+
+  protected assistProviderName(id: string): string {
+    return this.settingsSvc.providerMeta(id)?.name ?? id;
+  }
+
+  protected async saveAssist(): Promise<void> {
+    this.assistSaving.set(true);
+    try {
+      await this.settingsSvc.updateAssist({
+        provider: this.assistProvider(),
+        model: this.assistModel(),
+      });
+      this.assistSaved.set(true);
+      setTimeout(() => this.assistSaved.set(false), 2000);
+    } finally {
+      this.assistSaving.set(false);
+    }
   }
 
   protected toggleExpand(id: string): void {

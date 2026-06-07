@@ -61,6 +61,14 @@ export class SettingsService {
     await this.bridge.saveSettings({ stt: updated.stt });
   }
 
+  async updateAssist(partial: Partial<AppSettings['assist']>): Promise<void> {
+    const current = this.settings();
+    if (!current) return;
+    const updated = { ...current, assist: { ...current.assist, ...partial } };
+    this.settings.set(updated);
+    await this.bridge.saveSettings({ assist: updated.assist });
+  }
+
   async updateDisplay(display: Partial<AppSettings['display']>): Promise<void> {
     const current = this.settings();
     if (!current) return;
