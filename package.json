@@ -1,6 +1,8 @@
 {
   "name": "claude-real-time-translator",
   "version": "0.0.0",
+  "author": "Amir Mokarram",
+  "license": "UNLICENSED",
   "main": "dist-electron/main.js",
   "scripts": {
     "ng": "ng",
