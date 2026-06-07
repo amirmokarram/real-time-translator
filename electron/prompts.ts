@@ -41,11 +41,24 @@ export function resolveTranslationPrompt(custom?: string): string {
   return custom?.trim() || DEFAULT_TRANSLATION_PROMPT;
 }
 
-// Build the assist system prompt: custom-or-default base, with the selected
-// transcript auto-appended below it when present.
+// Build the assist system prompt: custom-or-default base, then a mode footer.
+// - With a selected transcript (Ask on rows) → append it as interview context,
+//   so the base's two-section interview format applies.
+// - Without one (header Assist = free chat) → tell the model to drop the fixed
+//   interview format and just answer the question directly.
 export function composeAssistPrompt(base?: string, context?: string): string {
   const head = base?.trim() || DEFAULT_ASSIST_PROMPT;
-  if (!context?.trim()) return head;
+
+  if (!context?.trim()) {
+    return (
+      `${head}\n\n` +
+      `--- Current mode: free chat ---\n` +
+      `No interview transcript is selected. Ignore any fixed two-section interview ` +
+      `format from the instructions above. Just answer the user's message directly ` +
+      `and conversationally in simple English.`
+    );
+  }
+
   return (
     `${head}\n\n` +
     `--- Selected conversation transcript ---\n${context.trim()}\n` +
