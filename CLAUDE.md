@@ -8,7 +8,7 @@ Cross-platform desktop app for **real-time English→Persian (Farsi) translation
 - **Angular 21** (standalone components, signals, `@if`/`@for`) — renderer
 - **Electron 42** — desktop shell
 - **DeepGram** — streaming speech-to-text (WebSocket)
-- 6 switchable translation providers: Claude, Google, DeepL, Microsoft, OpenAI, LibreTranslate
+- 7 switchable translation providers: Claude, Google, DeepL, Microsoft, OpenAI, LibreTranslate, Ollama (local)
 - Persian UI: Vazirmatn font, RTL, dark theme
 
 ## Architecture (key rules)

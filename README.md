@@ -12,7 +12,7 @@ Built with Angular 21 + Electron 42. Persian-first UI (Vazirmatn font, RTL, dark
 
 - **System-audio capture** — transcribes what you hear (system loopback) or a selected microphone.
 - **Streaming speech-to-text** via [Deepgram](https://deepgram.com) (Nova-2), with real-time per-sentence segmentation.
-- **6 switchable translation providers** — Claude, Google, DeepL, Microsoft, OpenAI, LibreTranslate.
+- **7 switchable translation providers** — Claude, Google, DeepL, Microsoft, OpenAI, LibreTranslate, Ollama (local, e.g. TranslateGemma).
 - **Live dual-pane display** — chat-style history with synced English/Persian rows, auto-scroll, per-row copy.
 - **Overlay mode** — a floating, always-on-top, click-through subtitle window for use over other apps.
 - **History export** — save the transcript as `.txt` or `.srt` subtitles.
