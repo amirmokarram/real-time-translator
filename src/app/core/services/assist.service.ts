@@ -25,6 +25,19 @@ export class AssistService {
     this.isOpen.set(true);
   }
 
+  // Open for a free-form question with no transcript context (header entry point).
+  open(): void {
+    this.context.set(null);
+    this.messages.set([]);
+    this.streaming.set('');
+    this.error.set(null);
+    this.isOpen.set(true);
+  }
+
+  toggle(): void {
+    this.isOpen() ? this.close() : this.open();
+  }
+
   close(): void {
     this.isOpen.set(false);
   }

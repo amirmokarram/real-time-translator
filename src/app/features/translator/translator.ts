@@ -9,13 +9,12 @@ import { TranscriptionService } from '../../core/services/transcription.service'
 import { SettingsService } from '../../core/services/settings.service';
 import { ExportService, ExportFormat } from '../../core/services/export.service';
 import { AssistService } from '../../core/services/assist.service';
-import { AssistPanelComponent } from '../assist/assist-panel';
 import { TranslationEntry } from '../../core/models/app.models';
 
 @Component({
   selector: 'app-translator',
   standalone: true,
-  imports: [FormsModule, AssistPanelComponent],
+  imports: [FormsModule],
   templateUrl: './translator.html',
   styleUrl: './translator.scss',
 })

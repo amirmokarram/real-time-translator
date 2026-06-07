@@ -2,6 +2,7 @@ import { Component, inject, signal, OnInit } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { SettingsService } from '../../core/services/settings.service';
 import { ElectronBridgeService } from '../../core/services/electron-bridge.service';
+import { AssistService } from '../../core/services/assist.service';
 
 @Component({
   selector: 'app-header',
@@ -13,6 +14,7 @@ import { ElectronBridgeService } from '../../core/services/electron-bridge.servi
 export class HeaderComponent implements OnInit {
   protected settings = inject(SettingsService);
   protected bridge = inject(ElectronBridgeService);
+  protected assist = inject(AssistService);
 
   protected showProviderMenu = signal(false);
   protected overlayOpen = signal(false);
@@ -25,6 +27,10 @@ export class HeaderComponent implements OnInit {
   protected async toggleOverlay(): Promise<void> {
     const open = await this.bridge.toggleOverlay();
     this.overlayOpen.set(open);
+  }
+
+  protected toggleAssist(): void {
+    this.assist.toggle();
   }
 
   protected get activeProviderName(): string {

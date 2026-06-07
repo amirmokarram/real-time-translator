@@ -42,14 +42,18 @@
     <div class="assist-thread" #thread>
       @if (assist.messages().length === 0 && !assist.streaming()) {
         <div class="assist-quick">
-          <p class="quick-hint">Ask about the selected conversation:</p>
-          <div class="quick-actions">
-            @for (qa of quickActions; track qa.label) {
-              <button class="quick-btn" [disabled]="assist.isAsking()" (click)="runQuick(qa.prompt)">
-                {{ qa.label }}
-              </button>
-            }
-          </div>
+          @if (assist.context()) {
+            <p class="quick-hint">Ask about the selected conversation:</p>
+            <div class="quick-actions">
+              @for (qa of quickActions; track qa.label) {
+                <button class="quick-btn" [disabled]="assist.isAsking()" (click)="runQuick(qa.prompt)">
+                  {{ qa.label }}
+                </button>
+              }
+            </div>
+          } @else {
+            <p class="quick-hint">Ask anything — or select transcript rows and hit Ask to add context.</p>
+          }
         </div>
       }
 
