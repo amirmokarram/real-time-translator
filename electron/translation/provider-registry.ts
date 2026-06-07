@@ -5,6 +5,7 @@ import { DeepLProvider } from './providers/deepl.provider';
 import { MicrosoftProvider } from './providers/microsoft.provider';
 import { OpenAIProvider } from './providers/openai.provider';
 import { LibreTranslateProvider } from './providers/libretranslate.provider';
+import { OllamaProvider } from './providers/ollama.provider';
 
 export class ProviderRegistry {
   private providers = new Map<string, ITranslationProvider>();
@@ -17,6 +18,7 @@ export class ProviderRegistry {
       new MicrosoftProvider(),
       new OpenAIProvider(),
       new LibreTranslateProvider(),
+      new OllamaProvider(),
     ]) {
       this.providers.set(p.meta.id, p);
     }

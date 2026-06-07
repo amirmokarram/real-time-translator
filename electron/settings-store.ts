@@ -1,12 +1,16 @@
 import { app } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs/promises';
+import { DEFAULT_OLLAMA_TRANSLATION_PROMPT } from './prompts';
 
 export interface ProviderSettings {
   apiKey?: string;
   model?: string;
   region?: string;
   endpoint?: string;
+  // Optional per-provider translation system prompt. Empty/undefined → fall back
+  // to the global settings.prompts.translation (then the built-in default).
+  prompt?: string;
 }
 
 export interface AppSettings {
@@ -48,6 +52,7 @@ const defaults: AppSettings = {
     microsoft: { region: 'eastus' },
     openai: { model: 'gpt-4o-mini' },
     libretranslate: { endpoint: 'http://localhost:5000' },
+    ollama: { model: '', endpoint: 'http://localhost:11434', prompt: DEFAULT_OLLAMA_TRANSLATION_PROMPT },
   },
   stt: {
     provider: 'deepgram',

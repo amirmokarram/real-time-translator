@@ -73,7 +73,9 @@ export function registerIpcHandlers(
       text,
       sourceLang: 'en',
       targetLang: 'fa',
-      systemPrompt: settings.prompts?.translation,
+      // Per-provider override wins (e.g. a lean prompt for Ollama/TranslateGemma);
+      // otherwise fall back to the global translation prompt, then the default.
+      systemPrompt: providerSettings.prompt?.trim() || settings.prompts?.translation,
     };
 
     // Tell all windows what English text we're about to translate

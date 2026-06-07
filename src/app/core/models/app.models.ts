@@ -3,7 +3,7 @@
 export interface ConfigField {
   key: string;
   label: string;
-  type: 'password' | 'text' | 'select';
+  type: 'password' | 'text' | 'select' | 'textarea';
   placeholder?: string;
   options?: { value: string; label: string }[];
 }

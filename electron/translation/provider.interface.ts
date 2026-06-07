@@ -26,7 +26,7 @@ export interface ProviderMeta {
 export interface ConfigField {
   key: keyof ProviderSettings;
   label: string;
-  type: 'password' | 'text' | 'select';
+  type: 'password' | 'text' | 'select' | 'textarea';
   placeholder?: string;
   options?: { value: string; label: string }[];
 }

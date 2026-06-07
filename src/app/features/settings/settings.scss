@@ -338,6 +338,13 @@
   option { background: var(--surface-elevated); }
 }
 
+.field-textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 70px;
+  line-height: 1.5;
+}
+
 .field-select { cursor: pointer; }
 
 .prompt-textarea {
