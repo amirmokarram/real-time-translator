@@ -43,6 +43,12 @@ export class SettingsComponent implements OnInit {
   protected assistValidating = signal(false);
   protected assistValidResult = signal<{ valid: boolean; error?: string } | null>(null);
 
+  // Custom system prompts (empty stored value falls back to these defaults).
+  protected assistPrompt = signal('');
+  protected translationPrompt = signal('');
+  private defaultPrompts = { assist: '', translation: '' };
+  protected promptSaved = signal<'assist' | 'translation' | null>(null);
+
   // STT (DeepGram)
   protected sttApiKey = signal('');
   protected sttSaving = signal(false);
@@ -74,6 +80,40 @@ export class SettingsComponent implements OnInit {
     this.assistProvider.set(settings?.assist.provider ?? 'claude');
     this.assistModel.set(settings?.assist.model ?? '');
     this.assistEndpoint.set(settings?.assist.endpoint ?? 'http://localhost:11434');
+
+    // Prompt editors: show the saved custom prompt, or the built-in default.
+    this.defaultPrompts = await this.bridge.getDefaultPrompts();
+    this.assistPrompt.set(settings?.prompts.assist?.trim() ? settings.prompts.assist : this.defaultPrompts.assist);
+    this.translationPrompt.set(
+      settings?.prompts.translation?.trim() ? settings.prompts.translation : this.defaultPrompts.translation
+    );
+  }
+
+  // ── System prompts ────────────────────────────────────────────────────────────
+
+  private flashPromptSaved(which: 'assist' | 'translation'): void {
+    this.promptSaved.set(which);
+    setTimeout(() => { if (this.promptSaved() === which) this.promptSaved.set(null); }, 2000);
+  }
+
+  protected async saveAssistPrompt(): Promise<void> {
+    await this.settingsSvc.updatePrompts({ assist: this.assistPrompt() });
+    this.flashPromptSaved('assist');
+  }
+
+  protected resetAssistPrompt(): void {
+    this.assistPrompt.set(this.defaultPrompts.assist);
+    void this.saveAssistPrompt();
+  }
+
+  protected async saveTranslationPrompt(): Promise<void> {
+    await this.settingsSvc.updatePrompts({ translation: this.translationPrompt() });
+    this.flashPromptSaved('translation');
+  }
+
+  protected resetTranslationPrompt(): void {
+    this.translationPrompt.set(this.defaultPrompts.translation);
+    void this.saveTranslationPrompt();
   }
 
   // ── Assist ──────────────────────────────────────────────────────────────────

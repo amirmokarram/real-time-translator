@@ -24,6 +24,11 @@ export interface AppSettings {
     model: string;
     endpoint: string;
   };
+  // Custom system prompts. Empty string → use the built-in default (see prompts.ts).
+  prompts: {
+    assist: string;
+    translation: string;
+  };
   audio: {
     selectedSourceId: string | null;
   };
@@ -53,6 +58,10 @@ const defaults: AppSettings = {
     provider: 'claude',
     model: 'claude-sonnet-4-6',
     endpoint: 'http://localhost:11434',
+  },
+  prompts: {
+    assist: '',
+    translation: '',
   },
   audio: {
     selectedSourceId: null,

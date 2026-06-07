@@ -13,6 +13,8 @@ export interface AssistRequest {
   messages: AssistMessage[];
   // Optional transcript block the user selected as context for this thread.
   context?: string;
+  // Custom system-prompt base (from settings). Empty/undefined → built-in default.
+  systemPrompt?: string;
 }
 
 // Credentials/model for one assist call. apiKey is reused from the matching
@@ -31,21 +33,4 @@ export interface IAssistProvider {
     settings: AssistProviderSettings,
     onChunk?: (chunk: string) => void
   ): Promise<string>;
-}
-
-// Shared system prompt — keeps the two providers behaving identically.
-export function buildSystemPrompt(context?: string): string {
-  const base =
-    'You are a helpful assistant embedded in a real-time English→Persian ' +
-    'meeting translator used by a Persian speaker. They may ask in Persian or ' +
-    'English; reply in the SAME language they used. Be concise and direct. ' +
-    'When they ask about the conversation, ground your answer in the provided ' +
-    'transcript excerpt.';
-
-  if (!context?.trim()) return base;
-  return (
-    `${base}\n\n` +
-    `--- Selected conversation transcript ---\n${context.trim()}\n` +
-    `--- End transcript ---`
-  );
 }

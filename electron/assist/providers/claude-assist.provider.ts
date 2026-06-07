@@ -3,8 +3,8 @@ import {
   AssistProviderSettings,
   AssistRequest,
   IAssistProvider,
-  buildSystemPrompt,
 } from '../assist.interface';
+import { composeAssistPrompt } from '../../prompts';
 
 export class ClaudeAssistProvider implements IAssistProvider {
   readonly id = 'claude';
@@ -18,7 +18,7 @@ export class ClaudeAssistProvider implements IAssistProvider {
 
     const client = new Anthropic({ apiKey: settings.apiKey });
     const model = settings.model ?? 'claude-sonnet-4-6';
-    const system = buildSystemPrompt(request.context);
+    const system = composeAssistPrompt(request.systemPrompt, request.context);
     const messages = request.messages.map((m) => ({ role: m.role, content: m.content }));
 
     let full = '';

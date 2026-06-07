@@ -1,6 +1,7 @@
 import * as https from 'https';
 import { ITranslationProvider, ProviderMeta, TranslationRequest, TranslationResult } from '../provider.interface';
 import { ProviderSettings } from '../../settings-store';
+import { resolveTranslationPrompt } from '../../prompts';
 
 export class OpenAIProvider implements ITranslationProvider {
   readonly meta: ProviderMeta = {
@@ -42,7 +43,7 @@ export class OpenAIProvider implements ITranslationProvider {
       messages: [
         {
           role: 'system',
-          content: 'You are a professional English to Persian (Farsi) translator. Return ONLY the translated text with no explanations.',
+          content: resolveTranslationPrompt(request.systemPrompt),
         },
         { role: 'user', content: request.text },
       ],

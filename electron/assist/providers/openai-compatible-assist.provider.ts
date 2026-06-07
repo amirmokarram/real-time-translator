@@ -5,8 +5,8 @@ import {
   AssistProviderSettings,
   AssistRequest,
   IAssistProvider,
-  buildSystemPrompt,
 } from '../assist.interface';
+import { composeAssistPrompt } from '../../prompts';
 
 // Generic OpenAI-compatible local server: Docker Model Runner, LM Studio, vLLM,
 // llama.cpp server, LocalAI, etc. Uses the OpenAI /chat/completions shape against
@@ -30,7 +30,7 @@ export class OpenAICompatibleAssistProvider implements IAssistProvider {
       model,
       stream: !!onChunk,
       messages: [
-        { role: 'system', content: buildSystemPrompt(request.context) },
+        { role: 'system', content: composeAssistPrompt(request.systemPrompt, request.context) },
         ...request.messages.map((m) => ({ role: m.role, content: m.content })),
       ],
       max_tokens: 2048,

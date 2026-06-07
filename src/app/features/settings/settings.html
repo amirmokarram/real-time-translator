@@ -37,6 +37,35 @@
         <h2 class="section-title">Translation Providers</h2>
         <p class="section-desc">Configure API keys. Switch the active provider from the header dropdown.</p>
 
+        <div class="provider-card">
+          <div class="provider-card-body">
+            <div class="field-group">
+              <label class="field-label">Translation system prompt</label>
+              <textarea
+                class="field-input prompt-textarea"
+                rows="5"
+                spellcheck="false"
+                [ngModel]="translationPrompt()"
+                (ngModelChange)="translationPrompt.set($event)"
+                [ngModelOptions]="{ standalone: true }"></textarea>
+              <p class="field-hint">
+                Only applies to LLM providers (<strong>Claude</strong>, <strong>OpenAI</strong>).
+                Google, DeepL, Microsoft and LibreTranslate are machine-translation APIs and ignore it.
+              </p>
+            </div>
+            <div class="provider-card-actions">
+              <button class="btn-save" (click)="saveTranslationPrompt()">Save</button>
+              <button class="btn-test" (click)="resetTranslationPrompt()">Reset to default</button>
+              @if (promptSaved() === 'translation') {
+                <div class="validation-result valid">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                  Saved
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+
         @for (p of settingsSvc.providers(); track p.id) {
           <div class="provider-card" [class.active-provider]="p.id === settingsSvc.activeProvider()">
 
@@ -351,6 +380,35 @@
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                     {{ result.error ?? 'Failed' }}
                   }
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+
+        <div class="provider-card">
+          <div class="provider-card-body">
+            <div class="field-group">
+              <label class="field-label">Assist system prompt</label>
+              <textarea
+                class="field-input prompt-textarea"
+                rows="6"
+                spellcheck="false"
+                [ngModel]="assistPrompt()"
+                (ngModelChange)="assistPrompt.set($event)"
+                [ngModelOptions]="{ standalone: true }"></textarea>
+              <p class="field-hint">
+                The assistant's instructions. The selected transcript is automatically appended below this
+                when you open Assist from selected rows.
+              </p>
+            </div>
+            <div class="provider-card-actions">
+              <button class="btn-save" (click)="saveAssistPrompt()">Save</button>
+              <button class="btn-test" (click)="resetAssistPrompt()">Reset to default</button>
+              @if (promptSaved() === 'assist') {
+                <div class="validation-result valid">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                  Saved
                 </div>
               }
             </div>

@@ -5,8 +5,8 @@ import {
   AssistProviderSettings,
   AssistRequest,
   IAssistProvider,
-  buildSystemPrompt,
 } from '../assist.interface';
+import { composeAssistPrompt } from '../../prompts';
 
 // Offline assist via a local Ollama server (https://ollama.com). No API key —
 // the user runs `ollama serve` and pulls a model (e.g. `ollama pull llama3.2`).
@@ -29,7 +29,7 @@ export class OllamaAssistProvider implements IAssistProvider {
       model,
       stream: !!onChunk,
       messages: [
-        { role: 'system', content: buildSystemPrompt(request.context) },
+        { role: 'system', content: composeAssistPrompt(request.systemPrompt, request.context) },
         ...request.messages.map((m) => ({ role: m.role, content: m.content })),
       ],
     });

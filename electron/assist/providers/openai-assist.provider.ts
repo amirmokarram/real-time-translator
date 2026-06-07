@@ -3,8 +3,8 @@ import {
   AssistProviderSettings,
   AssistRequest,
   IAssistProvider,
-  buildSystemPrompt,
 } from '../assist.interface';
+import { composeAssistPrompt } from '../../prompts';
 
 export class OpenAIAssistProvider implements IAssistProvider {
   readonly id = 'openai';
@@ -21,7 +21,7 @@ export class OpenAIAssistProvider implements IAssistProvider {
       model,
       stream: !!onChunk,
       messages: [
-        { role: 'system', content: buildSystemPrompt(request.context) },
+        { role: 'system', content: composeAssistPrompt(request.systemPrompt, request.context) },
         ...request.messages.map((m) => ({ role: m.role, content: m.content })),
       ],
       max_tokens: 2048,

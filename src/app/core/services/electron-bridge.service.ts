@@ -20,6 +20,7 @@ const mockSettings: AppSettings = {
   },
   stt: { provider: 'deepgram', apiKey: '', language: 'en' },
   assist: { provider: 'claude', model: 'claude-sonnet-4-6', endpoint: 'http://localhost:11434' },
+  prompts: { assist: '', translation: '' },
   audio: { selectedSourceId: null },
   display: { fontSize: 16, showInterimResults: true, historyLength: 50 },
 };
@@ -90,6 +91,10 @@ export class ElectronBridgeService {
 
   validateAssist(): Promise<{ valid: boolean; error?: string }> {
     return this.api?.validateAssist() ?? Promise.resolve({ valid: true });
+  }
+
+  getDefaultPrompts(): Promise<{ assist: string; translation: string }> {
+    return this.api?.getDefaultPrompts() ?? Promise.resolve({ assist: '', translation: '' });
   }
 
   onAssistChunk(cb: (chunk: string) => void): () => void {

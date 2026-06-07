@@ -30,6 +30,7 @@ export interface AppSettings {
   providers: Record<string, ProviderSettings>;
   stt: { provider: string; apiKey: string; language: string };
   assist: { provider: string; model: string; endpoint: string };
+  prompts: { assist: string; translation: string };
   audio: { selectedSourceId: string | null };
   display: { fontSize: number; showInterimResults: boolean; historyLength: number };
 }
@@ -83,6 +84,7 @@ export interface ElectronAPI {
   translate(payload: { text: string; providerId: string }): Promise<TranslationResult>;
   assist(payload: { messages: AssistMessage[]; context?: string }): Promise<string>;
   validateAssist(): Promise<{ valid: boolean; error?: string }>;
+  getDefaultPrompts(): Promise<{ assist: string; translation: string }>;
   validateProvider(payload: { providerId: string }): Promise<{ valid: boolean; error?: string }>;
   getAvailableProviders(): Promise<ProviderMeta[]>;
   // Export

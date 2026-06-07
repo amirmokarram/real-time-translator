@@ -4,6 +4,9 @@ export interface TranslationRequest {
   text: string;
   sourceLang: string;
   targetLang: string;
+  // Custom system prompt for LLM providers (Claude/OpenAI). Empty/undefined →
+  // built-in default. Pure MT providers (Google/DeepL/Microsoft/Libre) ignore it.
+  systemPrompt?: string;
 }
 
 export interface TranslationResult {

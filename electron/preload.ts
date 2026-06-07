@@ -26,6 +26,7 @@ const electronAPI = {
   // Assist mode
   assist: (payload: unknown) => ipcRenderer.invoke('assist:ask', payload),
   validateAssist: () => ipcRenderer.invoke('assist:validate'),
+  getDefaultPrompts: () => ipcRenderer.invoke('prompts:get-defaults'),
 
   // Export
   exportFile: (payload: unknown) => ipcRenderer.invoke('export:save', payload),
