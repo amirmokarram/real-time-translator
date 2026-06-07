@@ -17,6 +17,18 @@ export interface AppSettings {
     apiKey: string;
     language: string;
   };
+  // Assist mode reuses the matching translation provider's API key; only the
+  // provider choice and model live here. endpoint is used by Ollama (local).
+  assist: {
+    provider: string;
+    model: string;
+    endpoint: string;
+  };
+  // Custom system prompts. Empty string → use the built-in default (see prompts.ts).
+  prompts: {
+    assist: string;
+    translation: string;
+  };
   audio: {
     selectedSourceId: string | null;
   };
@@ -41,6 +53,15 @@ const defaults: AppSettings = {
     provider: 'deepgram',
     apiKey: '',
     language: 'en',
+  },
+  assist: {
+    provider: 'claude',
+    model: 'claude-sonnet-4-6',
+    endpoint: 'http://localhost:11434',
+  },
+  prompts: {
+    assist: '',
+    translation: '',
   },
   audio: {
     selectedSourceId: null,

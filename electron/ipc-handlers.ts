@@ -5,9 +5,23 @@ import { AudioCapture } from './audio-capture';
 import { OverlayManager } from './overlay-window';
 import { ProviderRegistry } from './translation/provider-registry';
 import { TranslationRequest } from './translation/provider.interface';
+import { AssistRegistry } from './assist/assist-registry';
+import { AssistMessage } from './assist/assist.interface';
+import { DEFAULT_ASSIST_PROMPT, DEFAULT_TRANSLATION_PROMPT } from './prompts';
 
 const audioCapture = new AudioCapture();
 const registry = new ProviderRegistry();
+const assistRegistry = new AssistRegistry();
+
+// Collapse a run of repeated terminal punctuation (e.g. "؟؟", "??", "؟?", "!!")
+// into a single mark. Some NMT models (notably LibreTranslate/Argos) duplicate
+// the sentence-final question mark when translating questions; this fixes that
+// for every provider. Prefers the Persian "؟" when the run contains one.
+function collapseTerminalPunctuation(text: string): string {
+  return text.replace(/[?!؟](?:\s*[?!؟])+/g, (run) =>
+    run.includes('؟') ? '؟' : run.includes('?') ? '?' : '!'
+  );
+}
 
 export function registerIpcHandlers(
   ipcMain: IpcMain,
@@ -55,7 +69,12 @@ export function registerIpcHandlers(
 
     if (!provider) throw new Error(`Unknown provider: ${providerId}`);
 
-    const request: TranslationRequest = { text, sourceLang: 'en', targetLang: 'fa' };
+    const request: TranslationRequest = {
+      text,
+      sourceLang: 'en',
+      targetLang: 'fa',
+      systemPrompt: settings.prompts?.translation,
+    };
 
     // Tell all windows what English text we're about to translate
     broadcast('translation:source', text);
@@ -65,6 +84,7 @@ export function registerIpcHandlers(
       : undefined;
 
     const result = await provider.translate(request, providerSettings, onChunk);
+    result.translatedText = collapseTerminalPunctuation(result.translatedText);
     broadcast('translation:complete', result.translatedText);
     return result;
   });
@@ -78,6 +98,54 @@ export function registerIpcHandlers(
     if (!provider) return { valid: false, error: 'Unknown provider' };
     return provider.validate(providerSettings);
   });
+
+  // ── Assist (LLM Q&A about the conversation) ──────────────────────────────────
+  // Streamed to the calling window only (not broadcast — the overlay has no chat).
+  // Reuses the matching translation provider's API key; model comes from settings.assist.
+  ipcMain.handle('assist:ask', async (event, payload: unknown) => {
+    const { messages, context } = payload as { messages: AssistMessage[]; context?: string };
+    const settings = settingsStore.get();
+    const assistCfg = settings.assist;
+    const provider = assistRegistry.get(assistCfg.provider);
+    if (!provider) throw new Error(`Unknown assist provider: ${assistCfg.provider}`);
+
+    const apiKey = settings.providers[assistCfg.provider]?.apiKey;
+    const onChunk = (chunk: string) => event.sender.send('assist:chunk', chunk);
+
+    const full = await provider.ask(
+      { messages, context, systemPrompt: settings.prompts?.assist },
+      { apiKey, model: assistCfg.model, endpoint: assistCfg.endpoint },
+      onChunk
+    );
+    event.sender.send('assist:complete', full);
+    return full;
+  });
+
+  // Verify the configured assist provider works: a minimal non-streaming call.
+  // Reads saved settings, so the renderer should persist the form first.
+  ipcMain.handle('assist:validate', async () => {
+    const settings = settingsStore.get();
+    const assistCfg = settings.assist;
+    const provider = assistRegistry.get(assistCfg.provider);
+    if (!provider) return { valid: false, error: `Unknown assist provider: ${assistCfg.provider}` };
+
+    const apiKey = settings.providers[assistCfg.provider]?.apiKey;
+    try {
+      await provider.ask(
+        { messages: [{ role: 'user', content: 'ping' }] },
+        { apiKey, model: assistCfg.model, endpoint: assistCfg.endpoint }
+      );
+      return { valid: true };
+    } catch (err: unknown) {
+      return { valid: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  });
+
+  // ── Default system prompts (for the Settings editor + Reset) ─────────────────
+  ipcMain.handle('prompts:get-defaults', () => ({
+    assist: DEFAULT_ASSIST_PROMPT,
+    translation: DEFAULT_TRANSLATION_PROMPT,
+  }));
 
   // ── Export history to file ──────────────────────────────────────────────────
   ipcMain.handle('export:save', async (_event, payload: unknown) => {

@@ -340,6 +340,22 @@
 
 .field-select { cursor: pointer; }
 
+.prompt-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  resize: vertical;
+  min-height: 84px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.field-hint {
+  margin: 6px 0 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
 .provider-card-actions {
   display: flex;
   align-items: center;

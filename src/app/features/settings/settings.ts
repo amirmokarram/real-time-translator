@@ -23,9 +23,31 @@ export class SettingsComponent implements OnInit {
   protected bridge = inject(ElectronBridgeService);
 
   protected providerStates = signal<Record<string, ProviderFormState>>({});
-  protected activeTab = signal<'translation' | 'stt' | 'display'>('translation');
+  protected activeTab = signal<'translation' | 'stt' | 'assist' | 'display'>('translation');
   protected saving = signal(false);
   protected saveSuccess = signal(false);
+
+  // Assist mode — cloud LLMs plus local/offline options.
+  protected readonly assistProviderIds = ['claude', 'openai', 'ollama', 'openai-compatible'];
+  // Providers that run locally: free-text model + a server endpoint, no API key.
+  private readonly localAssistProviders = ['ollama', 'openai-compatible'];
+  private readonly assistEndpointDefaults: Record<string, string> = {
+    ollama: 'http://localhost:11434',
+    'openai-compatible': 'http://localhost:12434/engines/v1',
+  };
+  protected assistProvider = signal('claude');
+  protected assistModel = signal('');
+  protected assistEndpoint = signal('http://localhost:11434');
+  protected assistSaving = signal(false);
+  protected assistSaved = signal(false);
+  protected assistValidating = signal(false);
+  protected assistValidResult = signal<{ valid: boolean; error?: string } | null>(null);
+
+  // Custom system prompts (empty stored value falls back to these defaults).
+  protected assistPrompt = signal('');
+  protected translationPrompt = signal('');
+  private defaultPrompts = { assist: '', translation: '' };
+  protected promptSaved = signal<'assist' | 'translation' | null>(null);
 
   // STT (DeepGram)
   protected sttApiKey = signal('');
@@ -54,6 +76,126 @@ export class SettingsComponent implements OnInit {
 
     this.providerStates.set(states);
     this.sttApiKey.set(settings?.stt.apiKey ?? '');
+
+    this.assistProvider.set(settings?.assist.provider ?? 'claude');
+    this.assistModel.set(settings?.assist.model ?? '');
+    this.assistEndpoint.set(settings?.assist.endpoint ?? 'http://localhost:11434');
+
+    // Prompt editors: show the saved custom prompt, or the built-in default.
+    this.defaultPrompts = await this.bridge.getDefaultPrompts();
+    this.assistPrompt.set(settings?.prompts.assist?.trim() ? settings.prompts.assist : this.defaultPrompts.assist);
+    this.translationPrompt.set(
+      settings?.prompts.translation?.trim() ? settings.prompts.translation : this.defaultPrompts.translation
+    );
+  }
+
+  // ── System prompts ────────────────────────────────────────────────────────────
+
+  private flashPromptSaved(which: 'assist' | 'translation'): void {
+    this.promptSaved.set(which);
+    setTimeout(() => { if (this.promptSaved() === which) this.promptSaved.set(null); }, 2000);
+  }
+
+  protected async saveAssistPrompt(): Promise<void> {
+    await this.settingsSvc.updatePrompts({ assist: this.assistPrompt() });
+    this.flashPromptSaved('assist');
+  }
+
+  protected resetAssistPrompt(): void {
+    this.assistPrompt.set(this.defaultPrompts.assist);
+    void this.saveAssistPrompt();
+  }
+
+  protected async saveTranslationPrompt(): Promise<void> {
+    await this.settingsSvc.updatePrompts({ translation: this.translationPrompt() });
+    this.flashPromptSaved('translation');
+  }
+
+  protected resetTranslationPrompt(): void {
+    this.translationPrompt.set(this.defaultPrompts.translation);
+    void this.saveTranslationPrompt();
+  }
+
+  // ── Assist ──────────────────────────────────────────────────────────────────
+
+  // Model choices come from the matching translation provider's metadata, so the
+  // assist model list stays in sync with the provider definitions.
+  protected assistModelOptions(): { value: string; label: string }[] {
+    const meta = this.settingsSvc.providerMeta(this.assistProvider());
+    return meta?.configFields.find((f) => f.key === 'model')?.options ?? [];
+  }
+
+  protected isLocalAssist(): boolean {
+    return this.localAssistProviders.includes(this.assistProvider());
+  }
+
+  protected isOllama(): boolean {
+    return this.assistProvider() === 'ollama';
+  }
+
+  protected isOpenAICompatible(): boolean {
+    return this.assistProvider() === 'openai-compatible';
+  }
+
+  protected onAssistProviderChange(id: string): void {
+    this.assistProvider.set(id);
+    const isLocal = this.localAssistProviders.includes(id);
+    // Cloud providers have a fixed model list — default to the first option.
+    // Local models are free-text (whatever the user pulled), so leave blank.
+    this.assistModel.set(isLocal ? '' : this.assistModelOptions()[0]?.value ?? '');
+    // Seed the endpoint with the new local provider's sensible default.
+    if (isLocal) this.assistEndpoint.set(this.assistEndpointDefaults[id]);
+    this.assistSaved.set(false);
+    this.assistValidResult.set(null);
+  }
+
+  // Cloud assist reuses the chosen provider's translation API key — warn if it's
+  // blank. Local providers need no key, so this never applies to them.
+  protected assistKeyMissing(): boolean {
+    if (this.isLocalAssist()) return false;
+    const key = this.settingsSvc.settings()?.providers[this.assistProvider()]?.apiKey;
+    return !key?.trim();
+  }
+
+  protected assistProviderName(id: string): string {
+    if (id === 'ollama') return 'Ollama (Local)';
+    if (id === 'openai-compatible') return 'OpenAI-compatible (Local)';
+    return this.settingsSvc.providerMeta(id)?.name ?? id;
+  }
+
+  protected async saveAssist(): Promise<void> {
+    this.assistSaving.set(true);
+    try {
+      await this.settingsSvc.updateAssist({
+        provider: this.assistProvider(),
+        model: this.assistModel(),
+        endpoint: this.assistEndpoint(),
+      });
+      this.assistSaved.set(true);
+      setTimeout(() => this.assistSaved.set(false), 2000);
+    } finally {
+      this.assistSaving.set(false);
+    }
+  }
+
+  // Persist the form, then run a minimal call through the provider to confirm it
+  // works (valid key for cloud; reachable server + present model for local).
+  protected async testAssist(): Promise<void> {
+    this.assistValidating.set(true);
+    this.assistValidResult.set(null);
+    try {
+      await this.settingsSvc.updateAssist({
+        provider: this.assistProvider(),
+        model: this.assistModel(),
+        endpoint: this.assistEndpoint(),
+      });
+      const result = await this.bridge.validateAssist();
+      this.assistValidResult.set(result);
+    } catch (err: unknown) {
+      this.assistValidResult.set({ valid: false, error: err instanceof Error ? err.message : String(err) });
+    } finally {
+      this.assistValidating.set(false);
+    }
   }
 
   protected toggleExpand(id: string): void {

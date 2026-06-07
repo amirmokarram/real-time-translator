@@ -1,12 +1,13 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { HeaderComponent } from './shared/header/header';
+import { AssistPanelComponent } from './features/assist/assist-panel';
 import { SettingsService } from './core/services/settings.service';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, HeaderComponent],
+  imports: [RouterOutlet, HeaderComponent, AssistPanelComponent],
   template: `
     @if (isOverlay) {
       <router-outlet />
@@ -15,6 +16,8 @@ import { SettingsService } from './core/services/settings.service';
         <app-header />
         <main class="main-content">
           <router-outlet />
+          <!-- Assist slide-in panel — app-level so it works from any route -->
+          <app-assist-panel />
         </main>
       </div>
     }
@@ -30,6 +33,8 @@ import { SettingsService } from './core/services/settings.service';
       flex: 1;
       min-height: 0;
       overflow: hidden;
+      // Containing block for the absolutely-positioned assist slide-in panel
+      position: relative;
     }
   `],
 })

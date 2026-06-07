@@ -23,6 +23,11 @@ const electronAPI = {
   validateProvider: (payload: unknown) => ipcRenderer.invoke('translation:validate', payload),
   getAvailableProviders: () => ipcRenderer.invoke('translation:get-providers'),
 
+  // Assist mode
+  assist: (payload: unknown) => ipcRenderer.invoke('assist:ask', payload),
+  validateAssist: () => ipcRenderer.invoke('assist:validate'),
+  getDefaultPrompts: () => ipcRenderer.invoke('prompts:get-defaults'),
+
   // Export
   exportFile: (payload: unknown) => ipcRenderer.invoke('export:save', payload),
 
@@ -68,6 +73,18 @@ const electronAPI = {
     const handler = (_: Electron.IpcRendererEvent, text: string) => cb(text);
     ipcRenderer.on('translation:source', handler);
     return () => ipcRenderer.removeListener('translation:source', handler);
+  },
+
+  onAssistChunk: (cb: (chunk: string) => void) => {
+    const handler = (_: Electron.IpcRendererEvent, chunk: string) => cb(chunk);
+    ipcRenderer.on('assist:chunk', handler);
+    return () => ipcRenderer.removeListener('assist:chunk', handler);
+  },
+
+  onAssistComplete: (cb: (text: string) => void) => {
+    const handler = (_: Electron.IpcRendererEvent, text: string) => cb(text);
+    ipcRenderer.on('assist:complete', handler);
+    return () => ipcRenderer.removeListener('assist:complete', handler);
   },
 
   onOverlayState: (cb: (open: boolean) => void) => {

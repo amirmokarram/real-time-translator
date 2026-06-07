@@ -15,6 +15,12 @@
       </svg>
       Speech Recognition
     </button>
+    <button class="settings-tab" [class.active]="activeTab() === 'assist'" (click)="activeTab.set('assist')">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+      </svg>
+      Assist
+    </button>
     <button class="settings-tab" [class.active]="activeTab() === 'display'" (click)="activeTab.set('display')">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
@@ -30,6 +36,35 @@
       <section class="settings-section">
         <h2 class="section-title">Translation Providers</h2>
         <p class="section-desc">Configure API keys. Switch the active provider from the header dropdown.</p>
+
+        <div class="provider-card">
+          <div class="provider-card-body">
+            <div class="field-group">
+              <label class="field-label">Translation system prompt</label>
+              <textarea
+                class="field-input prompt-textarea"
+                rows="5"
+                spellcheck="false"
+                [ngModel]="translationPrompt()"
+                (ngModelChange)="translationPrompt.set($event)"
+                [ngModelOptions]="{ standalone: true }"></textarea>
+              <p class="field-hint">
+                Only applies to LLM providers (<strong>Claude</strong>, <strong>OpenAI</strong>).
+                Google, DeepL, Microsoft and LibreTranslate are machine-translation APIs and ignore it.
+              </p>
+            </div>
+            <div class="provider-card-actions">
+              <button class="btn-save" (click)="saveTranslationPrompt()">Save</button>
+              <button class="btn-test" (click)="resetTranslationPrompt()">Reset to default</button>
+              @if (promptSaved() === 'translation') {
+                <div class="validation-result valid">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                  Saved
+                </div>
+              }
+            </div>
+          </div>
+        </div>
 
         @for (p of settingsSvc.providers(); track p.id) {
           <div class="provider-card" [class.active-provider]="p.id === settingsSvc.activeProvider()">
@@ -75,8 +110,9 @@
                     @if (field.type === 'select') {
                       <select
                         class="field-select"
-                        [value]="getFieldValue(p.id, field.key)"
-                        (change)="setField(p.id, field.key, $any($event.target).value)">
+                        [ngModel]="getFieldValue(p.id, field.key)"
+                        (ngModelChange)="setField(p.id, field.key, $event)"
+                        [ngModelOptions]="{ standalone: true }">
                         @for (opt of field.options; track opt.value) {
                           <option [value]="opt.value">{{ opt.label }}</option>
                         }
@@ -206,6 +242,175 @@
                 <li>Click <strong>"Create API Key"</strong> → copy the key</li>
                 <li>Paste it above → Save → Test Connection</li>
               </ol>
+            </div>
+          </div>
+        </div>
+      </section>
+    }
+
+    <!-- ── Assist tab ───────────────────────────────────────────────────────── -->
+    @if (activeTab() === 'assist') {
+      <section class="settings-section">
+        <h2 class="section-title">Assist Mode</h2>
+        <p class="section-desc">
+          The LLM that answers questions about the conversation when you select rows and click
+          <strong>Ask</strong>. It reuses the API key from the matching provider's Translation settings.
+        </p>
+
+        <div class="provider-card active-provider">
+          <div class="provider-card-header" style="cursor:default">
+            <div class="provider-card-left">
+              <div class="provider-name-row">
+                <span class="provider-card-name">{{ assistProviderName(assistProvider()) }}</span>
+                <span class="active-chip">Assist</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="provider-card-body">
+            <div class="field-group">
+              <label class="field-label">Provider</label>
+              <select
+                class="field-select"
+                [ngModel]="assistProvider()"
+                (ngModelChange)="onAssistProviderChange($event)"
+                [ngModelOptions]="{ standalone: true }">
+                @for (id of assistProviderIds; track id) {
+                  <option [value]="id">{{ assistProviderName(id) }}</option>
+                }
+              </select>
+            </div>
+
+            <div class="field-group">
+              <label class="field-label">Model</label>
+              @if (isLocalAssist()) {
+                <input
+                  class="field-input"
+                  type="text"
+                  [placeholder]="isOpenAICompatible() ? 'e.g. ai/llama3.2' : 'e.g. llama3.2'"
+                  [value]="assistModel()"
+                  (input)="assistModel.set($any($event.target).value)"
+                  autocomplete="off"
+                  spellcheck="false">
+              } @else {
+                <select
+                  class="field-select"
+                  [ngModel]="assistModel()"
+                  (ngModelChange)="assistModel.set($event)"
+                  [ngModelOptions]="{ standalone: true }">
+                  @for (opt of assistModelOptions(); track opt.value) {
+                    <option [value]="opt.value">{{ opt.label }}</option>
+                  }
+                </select>
+              }
+            </div>
+
+            @if (isLocalAssist()) {
+              <div class="field-group">
+                <label class="field-label">Server endpoint</label>
+                <input
+                  class="field-input"
+                  type="text"
+                  [placeholder]="isOpenAICompatible() ? 'http://localhost:12434/engines/v1' : 'http://localhost:11434'"
+                  [value]="assistEndpoint()"
+                  (input)="assistEndpoint.set($any($event.target).value)"
+                  autocomplete="off"
+                  spellcheck="false">
+              </div>
+            }
+
+            @if (isOllama()) {
+              <div class="stt-steps">
+                <p class="stt-steps-title">Running Ollama locally:</p>
+                <ol>
+                  <li>Install from <strong>ollama.com</strong>, then start it (<strong>ollama serve</strong>)</li>
+                  <li>Pull a model: <strong>ollama pull llama3.2</strong></li>
+                  <li>Enter that model name above → Save. No API key or internet needed.</li>
+                </ol>
+              </div>
+            }
+
+            @if (isOpenAICompatible()) {
+              <div class="stt-steps">
+                <p class="stt-steps-title">Using Docker Model Runner (or any OpenAI-compatible server):</p>
+                <ol>
+                  <li>In Docker Desktop → <strong>Settings → AI / Model Runner</strong>, enable it and <strong>host-side TCP</strong> (default port 12434)</li>
+                  <li>Pull a model: <strong>docker model pull ai/llama3.2</strong></li>
+                  <li>Enter that model name above and the endpoint → Save. Also works with LM Studio, vLLM, llama.cpp, LocalAI.</li>
+                </ol>
+              </div>
+            }
+
+            @if (assistKeyMissing()) {
+              <div class="validation-result invalid">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                No API key set for {{ assistProviderName(assistProvider()) }} — add it in the Translation tab.
+              </div>
+            }
+
+            <div class="provider-card-actions">
+              <button class="btn-save" [disabled]="assistSaving()" (click)="saveAssist()">
+                @if (assistSaving()) { Saving… } @else { Save }
+              </button>
+
+              <button
+                class="btn-test"
+                [disabled]="assistValidating() || (assistKeyMissing() && !isLocalAssist())"
+                (click)="testAssist()">
+                @if (assistValidating()) {
+                  <span class="spinner-xs"></span> Testing…
+                } @else {
+                  Test Connection
+                }
+              </button>
+
+              @if (assistSaved()) {
+                <div class="validation-result valid">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                  Saved
+                </div>
+              }
+
+              @if (assistValidResult(); as result) {
+                <div class="validation-result" [class.valid]="result.valid" [class.invalid]="!result.valid">
+                  @if (result.valid) {
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                    Connected — assist is ready
+                  } @else {
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    {{ result.error ?? 'Failed' }}
+                  }
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+
+        <div class="provider-card">
+          <div class="provider-card-body">
+            <div class="field-group">
+              <label class="field-label">Assist system prompt</label>
+              <textarea
+                class="field-input prompt-textarea"
+                rows="6"
+                spellcheck="false"
+                [ngModel]="assistPrompt()"
+                (ngModelChange)="assistPrompt.set($event)"
+                [ngModelOptions]="{ standalone: true }"></textarea>
+              <p class="field-hint">
+                The assistant's instructions. The selected transcript is automatically appended below this
+                when you open Assist from selected rows.
+              </p>
+            </div>
+            <div class="provider-card-actions">
+              <button class="btn-save" (click)="saveAssistPrompt()">Save</button>
+              <button class="btn-test" (click)="resetAssistPrompt()">Reset to default</button>
+              @if (promptSaved() === 'assist') {
+                <div class="validation-result valid">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                  Saved
+                </div>
+              }
             </div>
           </div>
         </div>
