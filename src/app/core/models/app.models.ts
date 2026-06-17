@@ -28,7 +28,7 @@ export interface ProviderSettings {
 export interface AppSettings {
   activeProvider: string;
   providers: Record<string, ProviderSettings>;
-  stt: { provider: string; apiKey: string; language: string };
+  stt: { provider: string; apiKey: string; language: string; endpoint: string; model: string; useVad: boolean };
   assist: { provider: string; model: string; endpoint: string };
   prompts: { assist: string; translation: string };
   audio: { selectedSourceId: string | null };

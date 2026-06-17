@@ -18,7 +18,7 @@ const mockSettings: AppSettings = {
     openai: { model: 'gpt-4o-mini' },
     libretranslate: { endpoint: 'https://libretranslate.com' },
   },
-  stt: { provider: 'deepgram', apiKey: '', language: 'en' },
+  stt: { provider: 'deepgram', apiKey: '', language: 'en', endpoint: 'ws://localhost:9090', model: 'small', useVad: true },
   assist: { provider: 'claude', model: 'claude-sonnet-4-6', endpoint: 'http://localhost:11434' },
   prompts: { assist: '', translation: '' },
   audio: { selectedSourceId: null },

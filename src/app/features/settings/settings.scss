@@ -312,6 +312,13 @@
   gap: 5px;
 }
 
+.field-group-inline {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .field-label {
   font-size: 12px;
   font-weight: 500;

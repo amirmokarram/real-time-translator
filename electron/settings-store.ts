@@ -17,9 +17,12 @@ export interface AppSettings {
   activeProvider: string;
   providers: Record<string, ProviderSettings>;
   stt: {
-    provider: string;
-    apiKey: string;
+    provider: string;       // 'deepgram' (cloud streaming) | 'whisper' (local streaming)
+    apiKey: string;         // DeepGram key; unused by the local Whisper server
     language: string;
+    endpoint: string;       // Whisper only: WhisperLive WebSocket URL (ws://host:port)
+    model: string;          // Whisper only: model size/name the server should load
+    useVad: boolean;        // Whisper only: let the server gate on voice activity
   };
   // Assist mode reuses the matching translation provider's API key; only the
   // provider choice and model live here. endpoint is used by Ollama (local).
@@ -58,6 +61,9 @@ const defaults: AppSettings = {
     provider: 'deepgram',
     apiKey: '',
     language: 'en',
+    endpoint: 'ws://localhost:9090',
+    model: 'small',
+    useVad: true,
   },
   assist: {
     provider: 'claude',

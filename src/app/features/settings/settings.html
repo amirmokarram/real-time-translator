@@ -180,49 +180,111 @@
       <section class="settings-section">
         <h2 class="section-title">Speech Recognition</h2>
         <p class="section-desc">
-          DeepGram converts your captured system audio to text in real-time.
-          Free tier: <strong>12,000 min / year</strong> — no credit card required.
+          Converts your captured system audio to text in real-time. Choose
+          <strong>DeepGram</strong> (cloud, free tier) or <strong>Whisper</strong> (local, runs on your machine).
         </p>
 
         <div class="provider-card active-provider">
           <div class="provider-card-header" style="cursor:default">
             <div class="provider-card-left">
               <div class="provider-name-row">
-                <span class="provider-card-name">DeepGram Nova-2</span>
+                <span class="provider-card-name">
+                  {{ isWhisper() ? 'Whisper (Local)' : 'DeepGram Nova-2' }}
+                </span>
                 <span class="active-chip">Active</span>
-                <span class="free-chip">Free Tier</span>
+                @if (isWhisper()) {
+                  <span class="free-chip">Local</span>
+                } @else {
+                  <span class="free-chip">Free Tier</span>
+                }
               </div>
               <div class="provider-badges">
                 <span class="badge streaming-badge">
                   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-                  ~200 ms latency
+                  Streaming
                 </span>
               </div>
             </div>
-            <a href="https://console.deepgram.com/signup" target="_blank" class="btn-test" style="text-decoration:none">
-              Get free API key ↗
-            </a>
+            @if (!isWhisper()) {
+              <a href="https://console.deepgram.com/signup" target="_blank" class="btn-test" style="text-decoration:none">
+                Get free API key ↗
+              </a>
+            }
           </div>
 
           <div class="provider-card-body">
             <div class="field-group">
-              <label class="field-label">API Key</label>
-              <input
-                class="field-input"
-                type="password"
-                placeholder="Paste your DeepGram API key here"
-                [value]="sttApiKey()"
-                (input)="sttApiKey.set($any($event.target).value)"
-                autocomplete="off"
-                spellcheck="false">
+              <label class="field-label">Engine</label>
+              <select
+                class="field-select"
+                [ngModel]="sttProvider()"
+                (ngModelChange)="onSttProviderChange($event)"
+                [ngModelOptions]="{ standalone: true }">
+                <option value="deepgram">DeepGram (Cloud)</option>
+                <option value="whisper">Whisper (Local)</option>
+              </select>
             </div>
 
+            @if (!isWhisper()) {
+              <!-- DeepGram -->
+              <div class="field-group">
+                <label class="field-label">API Key</label>
+                <input
+                  class="field-input"
+                  type="password"
+                  placeholder="Paste your DeepGram API key here"
+                  [value]="sttApiKey()"
+                  (input)="sttApiKey.set($any($event.target).value)"
+                  autocomplete="off"
+                  spellcheck="false">
+              </div>
+            } @else {
+              <!-- Whisper (local, WhisperLive) -->
+              <div class="field-group">
+                <label class="field-label">Server endpoint</label>
+                <input
+                  class="field-input"
+                  type="text"
+                  placeholder="ws://localhost:9090"
+                  [value]="sttEndpoint()"
+                  (input)="sttEndpoint.set($any($event.target).value)"
+                  autocomplete="off"
+                  spellcheck="false">
+              </div>
+
+              <div class="field-group">
+                <label class="field-label">Model</label>
+                <input
+                  class="field-input"
+                  type="text"
+                  placeholder="tiny · base · small · medium · large-v3"
+                  [value]="sttModel()"
+                  (input)="sttModel.set($any($event.target).value)"
+                  autocomplete="off"
+                  spellcheck="false">
+                <p class="field-hint">
+                  Larger models are more accurate but slower. <strong>small</strong> is a good balance on CPU;
+                  use a GPU for <strong>medium</strong>/<strong>large-v3</strong>.
+                </p>
+              </div>
+
+              <div class="field-group field-group-inline">
+                <label class="field-label">Server-side voice activity detection</label>
+                <button
+                  class="toggle-btn"
+                  [class.on]="sttUseVad()"
+                  (click)="sttUseVad.set(!sttUseVad())">
+                  <span class="toggle-thumb"></span>
+                </button>
+              </div>
+            }
+
             <div class="provider-card-actions">
-              <button class="btn-save" [disabled]="sttSaving()" (click)="saveSttKey()">
+              <button class="btn-save" [disabled]="sttSaving()" (click)="saveStt()">
                 @if (sttSaving()) { Saving… } @else { Save }
               </button>
 
-              <button class="btn-test" [disabled]="sttValidating() || !sttApiKey().trim()" (click)="testSttConnection()">
+              <button class="btn-test" [disabled]="sttTestDisabled()" (click)="testSttConnection()">
                 @if (sttValidating()) {
                   <span class="spinner-xs"></span> Testing…
                 } @else {
@@ -230,11 +292,18 @@
                 }
               </button>
 
+              @if (sttSaved()) {
+                <div class="validation-result valid">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                  Saved
+                </div>
+              }
+
               @if (sttValidResult(); as result) {
                 <div class="validation-result" [class.valid]="result.valid" [class.invalid]="!result.valid">
                   @if (result.valid) {
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                    Connected — DeepGram is ready
+                    @if (result.error) { {{ result.error }} } @else { Connected — {{ isWhisper() ? 'Whisper is ready' : 'DeepGram is ready' }} }
                   } @else {
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                     {{ result.error ?? 'Failed' }}
@@ -243,14 +312,25 @@
               }
             </div>
 
-            <div class="stt-steps">
-              <p class="stt-steps-title">How to get your free key:</p>
-              <ol>
-                <li>Go to <strong>console.deepgram.com</strong> → Sign up (no credit card)</li>
-                <li>Click <strong>"Create API Key"</strong> → copy the key</li>
-                <li>Paste it above → Save → Test Connection</li>
-              </ol>
-            </div>
+            @if (!isWhisper()) {
+              <div class="stt-steps">
+                <p class="stt-steps-title">How to get your free DeepGram key:</p>
+                <ol>
+                  <li>Go to <strong>console.deepgram.com</strong> → Sign up (no credit card)</li>
+                  <li>Click <strong>"Create API Key"</strong> → copy the key</li>
+                  <li>Paste it above → Save → Test Connection</li>
+                </ol>
+              </div>
+            } @else {
+              <div class="stt-steps">
+                <p class="stt-steps-title">Running Whisper locally (WhisperLive):</p>
+                <ol>
+                  <li>Start the server, e.g. <strong>docker run -p 9090:9090 ghcr.io/collabora/whisperlive-cpu:latest</strong> (or the GPU image)</li>
+                  <li>Enter the endpoint above (default <strong>ws://localhost:9090</strong>) and a model name → Save</li>
+                  <li>Test Connection — fully offline, no API key or internet needed.</li>
+                </ol>
+              </div>
+            }
           </div>
         </div>
       </section>

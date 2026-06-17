@@ -49,9 +49,16 @@ export class SettingsComponent implements OnInit {
   private defaultPrompts = { assist: '', translation: '' };
   protected promptSaved = signal<'assist' | 'translation' | null>(null);
 
-  // STT (DeepGram)
+  // STT — DeepGram (cloud streaming) or Whisper (local streaming via WhisperLive)
+  protected readonly sttProviderIds = ['deepgram', 'whisper'];
+  private readonly whisperDefaults = { endpoint: 'ws://localhost:9090', model: 'small' };
+  protected sttProvider = signal('deepgram');
   protected sttApiKey = signal('');
+  protected sttEndpoint = signal('ws://localhost:9090');
+  protected sttModel = signal('small');
+  protected sttUseVad = signal(true);
   protected sttSaving = signal(false);
+  protected sttSaved = signal(false);
   protected sttValidating = signal(false);
   protected sttValidResult = signal<{ valid: boolean; error?: string } | null>(null);
 
@@ -75,7 +82,11 @@ export class SettingsComponent implements OnInit {
     }
 
     this.providerStates.set(states);
+    this.sttProvider.set(settings?.stt.provider ?? 'deepgram');
     this.sttApiKey.set(settings?.stt.apiKey ?? '');
+    this.sttEndpoint.set(settings?.stt.endpoint || this.whisperDefaults.endpoint);
+    this.sttModel.set(settings?.stt.model || this.whisperDefaults.model);
+    this.sttUseVad.set(settings?.stt.useVad ?? true);
 
     this.assistProvider.set(settings?.assist.provider ?? 'claude');
     this.assistModel.set(settings?.assist.model ?? '');
@@ -266,31 +277,113 @@ export class SettingsComponent implements OnInit {
     return this.providerStates()[providerId]?.fields[key] ?? '';
   }
 
-  protected async saveSttKey(): Promise<void> {
+  protected isWhisper(): boolean {
+    return this.sttProvider() === 'whisper';
+  }
+
+  protected onSttProviderChange(id: string): void {
+    this.sttProvider.set(id);
+    // Seed sensible Whisper defaults the first time the user switches to it.
+    if (id === 'whisper') {
+      if (!this.sttEndpoint().trim()) this.sttEndpoint.set(this.whisperDefaults.endpoint);
+      if (!this.sttModel().trim()) this.sttModel.set(this.whisperDefaults.model);
+    }
+    this.sttSaved.set(false);
+    this.sttValidResult.set(null);
+  }
+
+  // Persist the whole STT section (provider + the fields relevant to it).
+  private sttPatch(): Partial<{ provider: string; apiKey: string; endpoint: string; model: string; useVad: boolean }> {
+    return {
+      provider: this.sttProvider(),
+      apiKey: this.sttApiKey(),
+      endpoint: this.sttEndpoint().trim(),
+      model: this.sttModel().trim(),
+      useVad: this.sttUseVad(),
+    };
+  }
+
+  protected async saveStt(): Promise<void> {
     this.sttSaving.set(true);
     this.sttValidResult.set(null);
     try {
-      await this.settingsSvc.updateStt({ apiKey: this.sttApiKey() });
+      await this.settingsSvc.updateStt(this.sttPatch());
+      this.sttSaved.set(true);
+      setTimeout(() => this.sttSaved.set(false), 2000);
     } finally {
       this.sttSaving.set(false);
     }
   }
 
+  protected sttTestDisabled(): boolean {
+    if (this.sttValidating()) return true;
+    return this.isWhisper() ? !this.sttEndpoint().trim() : !this.sttApiKey().trim();
+  }
+
   protected async testSttConnection(): Promise<void> {
-    const key = this.sttApiKey().trim();
-    if (!key) return;
-    await this.settingsSvc.updateStt({ apiKey: key });
+    if (this.sttTestDisabled()) return;
+    await this.settingsSvc.updateStt(this.sttPatch());
     this.sttValidating.set(true);
     this.sttValidResult.set(null);
 
     try {
-      const result = await this.testDeepGram(key);
+      const result = this.isWhisper()
+        ? await this.testWhisper(this.sttEndpoint().trim())
+        : await this.testDeepGram(this.sttApiKey().trim());
       this.sttValidResult.set(result);
     } catch (err: unknown) {
       this.sttValidResult.set({ valid: false, error: err instanceof Error ? err.message : String(err) });
     } finally {
       this.sttValidating.set(false);
     }
+  }
+
+  // WhisperLive handshake: open the WS, send a minimal config, and wait for the
+  // server's SERVER_READY message (confirms the model is loaded). Reaching the
+  // socket but not getting SERVER_READY still counts as reachable.
+  private testWhisper(endpoint: string): Promise<{ valid: boolean; error?: string }> {
+    return new Promise((resolve) => {
+      let ws: WebSocket;
+      try {
+        ws = new WebSocket(endpoint);
+      } catch {
+        resolve({ valid: false, error: 'Invalid endpoint URL' });
+        return;
+      }
+      let opened = false;
+      const done = (result: { valid: boolean; error?: string }) => {
+        clearTimeout(timeout);
+        try { ws.close(); } catch { /* ignore */ }
+        resolve(result);
+      };
+      const timeout = setTimeout(() => {
+        done(opened
+          ? { valid: true, error: 'Reachable, but no SERVER_READY (model still loading?)' }
+          : { valid: false, error: 'Connection timed out — is WhisperLive running?' });
+      }, 8000);
+
+      ws.onopen = () => {
+        opened = true;
+        try {
+          ws.send(JSON.stringify({
+            uid: 'rtt-test',
+            language: this.settingsSvc.settings()?.stt.language ?? 'en',
+            task: 'transcribe',
+            model: this.sttModel().trim() || this.whisperDefaults.model,
+            use_vad: this.sttUseVad(),
+          }));
+        } catch { /* ignore */ }
+      };
+
+      ws.onmessage = (ev) => {
+        try {
+          const msg = JSON.parse(ev.data as string) as { message?: string };
+          if (msg.message === 'SERVER_READY') done({ valid: true });
+        } catch { /* ignore non-JSON frames */ }
+      };
+
+      ws.onerror = () => done({ valid: false, error: 'Connection refused — check the endpoint and that the server is running' });
+    });
   }
 
   private testDeepGram(apiKey: string): Promise<{ valid: boolean; error?: string }> {
