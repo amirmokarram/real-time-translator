@@ -80,10 +80,20 @@ npm run electron:dev
 
 Then configure keys in **Settings**:
 
-1. **Speech Recognition** → choose an engine. **Deepgram** (cloud): paste your API key. **Whisper** (local): start a [WhisperLive](https://github.com/collabora/WhisperLive) server (e.g. `docker run -p 9090:9090 ghcr.io/collabora/whisperlive-cpu:latest`), then set the endpoint (`ws://localhost:9090`) and model. → Test Connection.
+1. **Speech Recognition** → choose an engine. **Deepgram** (cloud): paste your API key. **Whisper** (local): start a [WhisperLive](https://github.com/collabora/WhisperLive) server (see note below), then set the endpoint (`ws://localhost:9090`) and model. → Test Connection.
 2. **Translation** → pick a provider, add its API key → Test Connection. (Switch the active provider from the header dropdown.)
 3. *(Optional)* **Assist** → choose Claude / OpenAI (reuses that provider's key) or a local server (Ollama / OpenAI-compatible) → Test Connection.
 
+> **WhisperLive note (running the local STT server):**
+> - **CPU:** `docker run -p 9090:9090 ghcr.io/collabora/whisperlive-cpu:latest`
+> - **GPU (NVIDIA):** the upstream `whisperlive-gpu:latest` is currently **broken** — it ships CUDA 13 libs while its bundled `ctranslate2` needs CUDA 12, so every transcription fails with `Library libcublas.so.12 is not found`. Build the patched image in [`docker/whisperlive-gpu-fixed/`](docker/whisperlive-gpu-fixed/Dockerfile) instead:
+>   ```bash
+>   docker build -t whisperlive-gpu-fixed:latest docker/whisperlive-gpu-fixed
+>   docker run -d --name whisperlive --restart unless-stopped --gpus all \
+>     -p 9090:9090 -v whisper-cache:/root/.cache/huggingface whisperlive-gpu-fixed:latest
+>   ```
+> The `-v whisper-cache:...` volume persists the downloaded model across restarts. The model downloads on first connect (e.g. `large-v3` ≈ 3 GB), so the first Test Connection may time out while it downloads — just retry once cached.
+>
 > **LibreTranslate note:** the public `libretranslate.com` endpoint is paid. Run it locally with Docker:
 > `docker run -p 5000:5000 libretranslate/libretranslate --load-only en,fa`
 

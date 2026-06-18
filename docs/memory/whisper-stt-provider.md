@@ -11,7 +11,7 @@ Adding **Whisper as a second STT provider** alongside DeepGram (started 2026-06-
 
 **Locked decisions (from plan Q&A):**
 - **Streaming, like DeepGram — NOT batch.** Rejected the OpenAI-compatible `/v1/audio/transcriptions` batch endpoint (and VAD-chunked WAV) because it can't replicate DeepGram's interim/real-time feel.
-- **Backend = local WhisperLive** (Collabora) over **WebSocket**. Default endpoint `ws://localhost:9090`, configurable. Free/offline; user runs the server (`docker run -p 9090:9090 ghcr.io/collabora/whisperlive-cpu:latest` or GPU image).
+- **Backend = local WhisperLive** (Collabora) over **WebSocket**. Default endpoint `ws://localhost:9090`, configurable. Free/offline; user runs the server. CPU: `docker run -p 9090:9090 ghcr.io/collabora/whisperlive-cpu:latest`. **GPU: upstream `whisperlive-gpu:latest` is BROKEN** (CUDA 13 libs vs ctranslate2-needs-CUDA-12 → `libcublas.so.12 not found`, silent server-side failure); use the patched image in `docker/whisperlive-gpu-fixed/Dockerfile` — see [[gotchas-and-lessons]]. Verified on RTX 3070 (8 GB) with `large-v3`.
 - **Location = renderer**, mirroring DeepGram. (Initial plan said Electron main, but a streaming WS to a local server IS DeepGram's situation — a browser WebSocket — so renderer is the truer mirror. Reversed.)
 - Server-side VAD (WhisperLive does the sliding window); no client-side VAD.
 
