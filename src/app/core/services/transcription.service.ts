@@ -2,6 +2,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { SettingsService } from './settings.service';
 import { ISttStream, SttCallbacks } from './stt/stt-stream';
 import { DeepGramStream } from './stt/deepgram-stream';
+import { WhisperStream } from './stt/whisper-stream';
 
 @Injectable({ providedIn: 'root' })
 export class TranscriptionService {
@@ -58,15 +59,29 @@ export class TranscriptionService {
   async start(stream: MediaStream, lang = 'en-US'): Promise<void> {
     if (this.isRunning()) return;
 
-    const apiKey = this.settings.settings()?.stt.apiKey?.trim() ?? '';
-    if (!apiKey) {
-      throw new Error('DeepGram API key is missing. Go to Settings → Speech Recognition to add it.');
-    }
-
+    const stt = this.settings.settings()?.stt;
     this.error.set(null);
 
-    this.stream = new DeepGramStream();
-    await this.stream.start(stream, { language: lang, apiKey }, this.callbacks);
+    if (stt?.provider === 'whisper') {
+      const endpoint = stt.endpoint?.trim() ?? '';
+      if (!endpoint) {
+        throw new Error('Whisper server endpoint is missing. Go to Settings → Speech Recognition to set it.');
+      }
+      this.stream = new WhisperStream();
+      await this.stream.start(
+        stream,
+        { language: lang, endpoint, model: stt.model, useVad: stt.useVad },
+        this.callbacks,
+      );
+    } else {
+      const apiKey = stt?.apiKey?.trim() ?? '';
+      if (!apiKey) {
+        throw new Error('DeepGram API key is missing. Go to Settings → Speech Recognition to add it.');
+      }
+      this.stream = new DeepGramStream();
+      await this.stream.start(stream, { language: lang, apiKey }, this.callbacks);
+    }
+
     this.isRunning.set(true);
   }
 

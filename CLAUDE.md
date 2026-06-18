@@ -7,12 +7,13 @@ Cross-platform desktop app for **real-time English→Persian (Farsi) translation
 ## Stack
 - **Angular 21** (standalone components, signals, `@if`/`@for`) — renderer
 - **Electron 42** — desktop shell
-- **DeepGram** — streaming speech-to-text (WebSocket)
+- 2 switchable streaming STT providers: **DeepGram** (cloud, WebSocket) and **Whisper** (local, WhisperLive WebSocket) — renderer-side `ISttStream` strategy
 - 7 switchable translation providers: Claude, Google, DeepL, Microsoft, OpenAI, LibreTranslate, Ollama (local)
 - Persian UI: Vazirmatn font, RTL, dark theme
 
 ## Architecture (key rules)
-- **API keys & all translation/STT API calls stay in the Electron MAIN process** — never move them to Angular services.
+- **Translation & assist API keys + calls stay in the Electron MAIN process** — never move them to Angular services.
+- **STT streaming is the exception: it runs in the RENDERER** (browser `WebSocket`, like DeepGram's subprotocol-token auth). Both providers live behind a renderer-side `ISttStream` strategy (`src/app/core/services/stt/`); `TranscriptionService` owns sentence segmentation and picks the strategy from `stt.provider`. Whisper uses a local WhisperLive WS — see [`docs/memory/whisper-stt-provider.md`](docs/memory/whisper-stt-provider.md).
 - Renderer ↔ main via secure IPC bridge (`contextBridge` + `electron/preload.ts`, typed `ElectronAPI`).
 - Router uses **HashLocationStrategy** (required for `file://` prod load; also how the overlay targets `#/overlay`).
 - Translation events (`translation:source`/`:chunk`/`:complete`) are **broadcast to all windows** so the overlay mirrors the main window for free.

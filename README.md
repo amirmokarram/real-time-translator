@@ -11,7 +11,7 @@ Built with Angular 21 + Electron 42. Persian-first UI (Vazirmatn font, RTL, dark
 ## Features
 
 - **System-audio capture** — transcribes what you hear (system loopback) or a selected microphone.
-- **Streaming speech-to-text** via [Deepgram](https://deepgram.com) (Nova-2), with real-time per-sentence segmentation.
+- **2 switchable streaming speech-to-text engines** — [Deepgram](https://deepgram.com) (Nova-2, cloud) or [WhisperLive](https://github.com/collabora/WhisperLive) (Whisper, fully local), with real-time per-sentence segmentation.
 - **7 switchable translation providers** — Claude, Google, DeepL, Microsoft, OpenAI, LibreTranslate, Ollama (local, e.g. TranslateGemma).
 - **Live dual-pane display** — chat-style history with synced English/Persian rows, auto-scroll, per-row copy.
 - **Overlay mode** — a floating, always-on-top, click-through subtitle window for use over other apps.
@@ -30,7 +30,7 @@ Built with Angular 21 + Electron 42. Persian-first UI (Vazirmatn font, RTL, dark
 |------|-----------|
 | UI | Angular 21 (standalone components, signals, `@if`/`@for`) |
 | Desktop shell | Electron 42 |
-| Speech-to-text | Deepgram streaming WebSocket |
+| Speech-to-text | Deepgram (cloud) or WhisperLive (local) — streaming WebSocket |
 | Translation | Claude, Google, DeepL, Microsoft, OpenAI, LibreTranslate |
 | Assist / LLM | Claude, OpenAI, Ollama, OpenAI-compatible (e.g. Docker Model Runner) |
 | Markdown | `marked` + `DOMPurify` |
@@ -62,7 +62,7 @@ src/app/
 
 - **Node.js** 20+ (developed on Node 24)
 - **npm**
-- A **Deepgram API key** (free tier available) for speech-to-text
+- For speech-to-text, either a **Deepgram API key** (free tier available) **or** a local **WhisperLive** server (no key, runs offline)
 - At least one **translation provider** key (or run LibreTranslate locally)
 - *(Optional)* For local Assist: **Ollama** or **Docker Model Runner** running locally
 
@@ -80,7 +80,7 @@ npm run electron:dev
 
 Then configure keys in **Settings**:
 
-1. **Speech Recognition** → paste your Deepgram API key → Test Connection.
+1. **Speech Recognition** → choose an engine. **Deepgram** (cloud): paste your API key. **Whisper** (local): start a [WhisperLive](https://github.com/collabora/WhisperLive) server (e.g. `docker run -p 9090:9090 ghcr.io/collabora/whisperlive-cpu:latest`), then set the endpoint (`ws://localhost:9090`) and model. → Test Connection.
 2. **Translation** → pick a provider, add its API key → Test Connection. (Switch the active provider from the header dropdown.)
 3. *(Optional)* **Assist** → choose Claude / OpenAI (reuses that provider's key) or a local server (Ollama / OpenAI-compatible) → Test Connection.
 

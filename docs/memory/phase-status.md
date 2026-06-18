@@ -27,6 +27,8 @@ Status tracker. Durable engineering lessons are in [[gotchas-and-lessons]]; arch
   - **Markdown rendering:** assistant replies + live stream go through `MarkdownPipe` (`marked` + `DOMPurify` sanitize → `SafeHtml`); user messages stay plain. Styled via `:host ::ng-deep .markdown` (innerHTML nodes carry no encapsulation attrs). **All links open in the system browser:** DOMPurify hook stamps `target=_blank`/`rel`, and main's `openLinksExternally` (`setWindowOpenHandler` + `will-navigate` → `shell.openExternal`, deny in-place nav). Deps added: `marked`, `dompurify`.
   - **Punctuation normalization:** translation IPC handler `collapseTerminalPunctuation` collapses duplicated terminal marks (؟؟/??/!! → one, prefers Persian ؟) — fixes LibreTranslate/Argos NMT doubling the final `?` on questions.
 
+**DONE (code) — Whisper STT provider (2026-06-18, branch `feature/whisper-stt-provider`):** 2nd Speech-Recognition engine alongside DeepGram, **streaming** via local **WhisperLive** WebSocket (renderer-side, mirrors DeepGram). All 4 phases built: A (settings/UI/CSP, commit `bdc56fe`) + B (`ISttStream` strategy refactor, `bdc56fe`) + C (WhisperLive PCM stream + provider branch) + D (ready-timeout + docs). Phase C+D **uncommitted**; branch not pushed. Full design + protocol in [[whisper-stt-provider]].
+
 **REMAINING (Phase 4 finale, independent):**
 - **System tray + global hotkeys** — minimize to tray; start/stop capture & toggle overlay without alt-tab (main-process `Tray` + `globalShortcut`).
 
