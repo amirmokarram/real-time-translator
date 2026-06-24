@@ -1,41 +1,237 @@
 <div class="settings-layout">
 
-  <!-- Tab bar -->
-  <div class="settings-tabs">
-    <button class="settings-tab" [class.active]="activeTab() === 'translation'" (click)="activeTab.set('translation')">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M5 12h14M12 5l7 7-7 7"/>
-      </svg>
-      Translation
-    </button>
-    <button class="settings-tab" [class.active]="activeTab() === 'stt'" (click)="activeTab.set('stt')">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-        <path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8"/>
-      </svg>
-      Speech Recognition
-    </button>
-    <button class="settings-tab" [class.active]="activeTab() === 'assist'" (click)="activeTab.set('assist')">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-      </svg>
-      Assist
-    </button>
-    <button class="settings-tab" [class.active]="activeTab() === 'display'" (click)="activeTab.set('display')">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
-      </svg>
-      Display
-    </button>
-  </div>
+  <!-- ── Left tree navigation ─────────────────────────────────────────────── -->
+  <nav class="settings-sidebar">
+    <ul class="settings-tree">
 
-  <div class="settings-scroll">
+      <li>
+        <button class="tree-item tree-leaf-top" [class.active]="activeNode() === 'general'" (click)="activeNode.set('general')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
+          </svg>
+          General
+        </button>
+      </li>
 
-    <!-- ── Translation tab ──────────────────────────────────────────────────── -->
-    @if (activeTab() === 'translation') {
+      <li>
+        <div class="tree-group-label">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+          Translation
+        </div>
+        <ul class="tree-children">
+          <li>
+            <button class="tree-item" [class.active]="activeNode() === 'translation-providers'" (click)="activeNode.set('translation-providers')">
+              Providers
+            </button>
+          </li>
+          <li>
+            <button class="tree-item" [class.active]="activeNode() === 'translation-prompt'" (click)="activeNode.set('translation-prompt')">
+              System Prompt
+            </button>
+          </li>
+        </ul>
+      </li>
+
+      <li>
+        <button class="tree-item tree-leaf-top" [class.active]="activeNode() === 'stt'" (click)="activeNode.set('stt')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8"/>
+          </svg>
+          Speech Recognition
+        </button>
+      </li>
+
+      <li>
+        <div class="tree-group-label">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          </svg>
+          Assist
+        </div>
+        <ul class="tree-children">
+          <li>
+            <button class="tree-item" [class.active]="activeNode() === 'assist-provider'" (click)="activeNode.set('assist-provider')">
+              Provider &amp; Model
+            </button>
+          </li>
+          <li>
+            <button class="tree-item" [class.active]="activeNode() === 'assist-prompt'" (click)="activeNode.set('assist-prompt')">
+              System Prompt
+            </button>
+          </li>
+        </ul>
+      </li>
+
+    </ul>
+  </nav>
+
+  <!-- ── Right content pane ───────────────────────────────────────────────── -->
+  <div class="settings-content">
+
+    <!-- ── General ──────────────────────────────────────────────────────────── -->
+    @if (activeNode() === 'general') {
+      <section class="settings-section">
+        <h2 class="section-title">General</h2>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <label class="setting-label">Font Size</label>
+            <span class="setting-desc">Text size in translation panes</span>
+          </div>
+          <div class="setting-control">
+            <input
+              type="range" min="12" max="24" step="1"
+              [value]="settingsSvc.settings()?.display?.fontSize ?? 16"
+              (input)="setFontSize(+$any($event.target).value)"
+              class="range-input">
+            <span class="range-value">{{ settingsSvc.settings()?.display?.fontSize ?? 16 }}px</span>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <label class="setting-label">Show Interim Results</label>
+            <span class="setting-desc">Display partial transcription while speaking</span>
+          </div>
+          <div class="setting-control">
+            <button
+              class="toggle-btn"
+              [class.on]="settingsSvc.settings()?.display?.showInterimResults"
+              (click)="toggleInterim(!settingsSvc.settings()?.display?.showInterimResults)">
+              <span class="toggle-thumb"></span>
+            </button>
+          </div>
+        </div>
+      </section>
+    }
+
+    <!-- ── Translation · Providers ──────────────────────────────────────────── -->
+    @if (activeNode() === 'translation-providers') {
       <section class="settings-section">
         <h2 class="section-title">Translation Providers</h2>
-        <p class="section-desc">Configure API keys. Switch the active provider from the header dropdown.</p>
+        <p class="section-desc">Choose your translation provider and configure its API key. The selected provider becomes the active one.</p>
+
+        @if (selectedProviderMeta(); as p) {
+          <div class="provider-card active-provider">
+            <div class="provider-card-header" style="cursor:default">
+              <div class="provider-card-left">
+                <div class="provider-name-row">
+                  <span class="provider-card-name">{{ p.name }}</span>
+                  <span class="active-chip">Active</span>
+                  @if (!p.requiresApiKey) {
+                    <span class="free-chip">Free</span>
+                  }
+                </div>
+                <div class="provider-badges">
+                  @if (p.supportsStreaming) {
+                    <span class="badge streaming-badge">
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                      Streaming
+                    </span>
+                  }
+                  @if (!p.requiresApiKey) {
+                    <span class="badge free-badge">No API Key Required</span>
+                  }
+                </div>
+              </div>
+            </div>
+
+            <div class="provider-card-body">
+              <div class="field-group">
+                <label class="field-label">Provider</label>
+                <select
+                  class="field-select"
+                  [ngModel]="selectedProvider()"
+                  (ngModelChange)="onTranslationProviderChange($event)"
+                  [ngModelOptions]="{ standalone: true }">
+                  @for (prov of settingsSvc.providers(); track prov.id) {
+                    <option [value]="prov.id">{{ prov.name }}</option>
+                  }
+                </select>
+              </div>
+
+              @if (p.configFields.length === 0) {
+                <p class="no-config">No configuration required for this provider.</p>
+              }
+
+              @for (field of p.configFields; track field.key) {
+                <div class="field-group">
+                  <label class="field-label">{{ field.label }}</label>
+                  @if (field.type === 'select') {
+                    <select
+                      class="field-select"
+                      [ngModel]="getFieldValue(p.id, field.key)"
+                      (ngModelChange)="setField(p.id, field.key, $event)"
+                      [ngModelOptions]="{ standalone: true }">
+                      @for (opt of field.options; track opt.value) {
+                        <option [value]="opt.value">{{ opt.label }}</option>
+                      }
+                    </select>
+                  } @else if (field.type === 'textarea') {
+                    <textarea
+                      class="field-input field-textarea"
+                      rows="4"
+                      [placeholder]="field.placeholder ?? ''"
+                      [value]="getFieldValue(p.id, field.key)"
+                      (input)="setField(p.id, field.key, $any($event.target).value)"
+                      spellcheck="false"></textarea>
+                  } @else {
+                    <input
+                      class="field-input"
+                      [type]="field.type"
+                      [placeholder]="field.placeholder ?? ''"
+                      [value]="getFieldValue(p.id, field.key)"
+                      (input)="setField(p.id, field.key, $any($event.target).value)"
+                      autocomplete="off"
+                      spellcheck="false">
+                  }
+                </div>
+              }
+
+              <div class="provider-card-actions">
+                <button class="btn-save" [disabled]="saving()" (click)="saveProvider(p)">
+                  @if (saving()) { Saving... } @else { Save }
+                </button>
+
+                @if (p.requiresApiKey || p.id === 'ollama') {
+                  <button
+                    class="btn-test"
+                    [disabled]="stateOf(p.id)?.validating"
+                    (click)="validateProvider(p)">
+                    @if (stateOf(p.id)?.validating) {
+                      <span class="spinner-xs"></span> Testing...
+                    } @else {
+                      Test Connection
+                    }
+                  </button>
+                }
+
+                @if (stateOf(p.id)?.validResult; as result) {
+                  <div class="validation-result" [class.valid]="result.valid" [class.invalid]="!result.valid">
+                    @if (result.valid) {
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                      Connected
+                    } @else {
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                      {{ result.error ?? 'Failed' }}
+                    }
+                  </div>
+                }
+              </div>
+            </div>
+          </div>
+        }
+      </section>
+    }
+
+    <!-- ── Translation · System Prompt ──────────────────────────────────────── -->
+    @if (activeNode() === 'translation-prompt') {
+      <section class="settings-section">
+        <h2 class="section-title">Translation System Prompt</h2>
+        <p class="section-desc">Shared across all translation providers.</p>
 
         <div class="provider-card">
           <div class="provider-card-body">
@@ -43,7 +239,7 @@
               <label class="field-label">Translation system prompt</label>
               <textarea
                 class="field-input prompt-textarea"
-                rows="5"
+                rows="6"
                 spellcheck="false"
                 [ngModel]="translationPrompt()"
                 (ngModelChange)="translationPrompt.set($event)"
@@ -65,118 +261,11 @@
             </div>
           </div>
         </div>
-
-        @for (p of settingsSvc.providers(); track p.id) {
-          <div class="provider-card" [class.active-provider]="p.id === settingsSvc.activeProvider()">
-
-            <div class="provider-card-header" (click)="toggleExpand(p.id)" (keydown.enter)="toggleExpand(p.id)" tabindex="0">
-              <div class="provider-card-left">
-                <div class="provider-name-row">
-                  <span class="provider-card-name">{{ p.name }}</span>
-                  @if (p.id === settingsSvc.activeProvider()) {
-                    <span class="active-chip">Active</span>
-                  }
-                  @if (!p.requiresApiKey) {
-                    <span class="free-chip">Free</span>
-                  }
-                </div>
-                <div class="provider-badges">
-                  @if (p.supportsStreaming) {
-                    <span class="badge streaming-badge">
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-                      Streaming
-                    </span>
-                  }
-                  @if (!p.requiresApiKey) {
-                    <span class="badge free-badge">No API Key Required</span>
-                  }
-                </div>
-              </div>
-              <svg class="expand-chevron" [class.expanded]="stateOf(p.id)?.expanded"
-                width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="6 9 12 15 18 9"/>
-              </svg>
-            </div>
-
-            @if (stateOf(p.id)?.expanded) {
-              <div class="provider-card-body">
-                @if (p.configFields.length === 0) {
-                  <p class="no-config">No configuration required for this provider.</p>
-                }
-
-                @for (field of p.configFields; track field.key) {
-                  <div class="field-group">
-                    <label class="field-label">{{ field.label }}</label>
-                    @if (field.type === 'select') {
-                      <select
-                        class="field-select"
-                        [ngModel]="getFieldValue(p.id, field.key)"
-                        (ngModelChange)="setField(p.id, field.key, $event)"
-                        [ngModelOptions]="{ standalone: true }">
-                        @for (opt of field.options; track opt.value) {
-                          <option [value]="opt.value">{{ opt.label }}</option>
-                        }
-                      </select>
-                    } @else if (field.type === 'textarea') {
-                      <textarea
-                        class="field-input field-textarea"
-                        rows="4"
-                        [placeholder]="field.placeholder ?? ''"
-                        [value]="getFieldValue(p.id, field.key)"
-                        (input)="setField(p.id, field.key, $any($event.target).value)"
-                        spellcheck="false"></textarea>
-                    } @else {
-                      <input
-                        class="field-input"
-                        [type]="field.type"
-                        [placeholder]="field.placeholder ?? ''"
-                        [value]="getFieldValue(p.id, field.key)"
-                        (input)="setField(p.id, field.key, $any($event.target).value)"
-                        autocomplete="off"
-                        spellcheck="false">
-                    }
-                  </div>
-                }
-
-                <div class="provider-card-actions">
-                  <button class="btn-save" [disabled]="saving()" (click)="saveProvider(p)">
-                    @if (saving()) { Saving... } @else { Save }
-                  </button>
-
-                  @if (p.requiresApiKey || p.id === 'ollama') {
-                    <button
-                      class="btn-test"
-                      [disabled]="stateOf(p.id)?.validating"
-                      (click)="validateProvider(p)">
-                      @if (stateOf(p.id)?.validating) {
-                        <span class="spinner-xs"></span> Testing...
-                      } @else {
-                        Test Connection
-                      }
-                    </button>
-                  }
-
-                  @if (stateOf(p.id)?.validResult; as result) {
-                    <div class="validation-result" [class.valid]="result.valid" [class.invalid]="!result.valid">
-                      @if (result.valid) {
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                        Connected
-                      } @else {
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                        {{ result.error ?? 'Failed' }}
-                      }
-                    </div>
-                  }
-                </div>
-              </div>
-            }
-          </div>
-        }
       </section>
     }
 
-    <!-- ── Speech Recognition tab ────────────────────────────────────────────── -->
-    @if (activeTab() === 'stt') {
+    <!-- ── Speech Recognition ───────────────────────────────────────────────── -->
+    @if (activeNode() === 'stt') {
       <section class="settings-section">
         <h2 class="section-title">Speech Recognition</h2>
         <p class="section-desc">
@@ -336,8 +425,8 @@
       </section>
     }
 
-    <!-- ── Assist tab ───────────────────────────────────────────────────────── -->
-    @if (activeTab() === 'assist') {
+    <!-- ── Assist · Provider & Model ────────────────────────────────────────── -->
+    @if (activeNode() === 'assist-provider') {
       <section class="settings-section">
         <h2 class="section-title">Assist Mode</h2>
         <p class="section-desc">
@@ -432,7 +521,7 @@
             @if (assistKeyMissing()) {
               <div class="validation-result invalid">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                No API key set for {{ assistProviderName(assistProvider()) }} — add it in the Translation tab.
+                No API key set for {{ assistProviderName(assistProvider()) }} — add it in the Translation settings.
               </div>
             }
 
@@ -473,6 +562,13 @@
             </div>
           </div>
         </div>
+      </section>
+    }
+
+    <!-- ── Assist · System Prompt ───────────────────────────────────────────── -->
+    @if (activeNode() === 'assist-prompt') {
+      <section class="settings-section">
+        <h2 class="section-title">Assist System Prompt</h2>
 
         <div class="provider-card">
           <div class="provider-card-body">
@@ -500,43 +596,6 @@
                 </div>
               }
             </div>
-          </div>
-        </div>
-      </section>
-    }
-
-    <!-- ── Display tab ──────────────────────────────────────────────────────── -->
-    @if (activeTab() === 'display') {
-      <section class="settings-section">
-        <h2 class="section-title">Display</h2>
-
-        <div class="setting-row">
-          <div class="setting-info">
-            <label class="setting-label">Font Size</label>
-            <span class="setting-desc">Text size in translation panes</span>
-          </div>
-          <div class="setting-control">
-            <input
-              type="range" min="12" max="24" step="1"
-              [value]="settingsSvc.settings()?.display?.fontSize ?? 16"
-              (input)="setFontSize(+$any($event.target).value)"
-              class="range-input">
-            <span class="range-value">{{ settingsSvc.settings()?.display?.fontSize ?? 16 }}px</span>
-          </div>
-        </div>
-
-        <div class="setting-row">
-          <div class="setting-info">
-            <label class="setting-label">Show Interim Results</label>
-            <span class="setting-desc">Display partial transcription while speaking</span>
-          </div>
-          <div class="setting-control">
-            <button
-              class="toggle-btn"
-              [class.on]="settingsSvc.settings()?.display?.showInterimResults"
-              (click)="toggleInterim(!settingsSvc.settings()?.display?.showInterimResults)">
-              <span class="toggle-thumb"></span>
-            </button>
           </div>
         </div>
       </section>

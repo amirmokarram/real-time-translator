@@ -8,8 +8,16 @@ interface ProviderFormState {
   fields: Record<string, string>;
   validating: boolean;
   validResult: { valid: boolean; error?: string } | null;
-  expanded: boolean;
 }
+
+// Leaf nodes of the left-panel settings tree.
+type SettingsNode =
+  | 'general'
+  | 'translation-providers'
+  | 'translation-prompt'
+  | 'stt'
+  | 'assist-provider'
+  | 'assist-prompt';
 
 @Component({
   selector: 'app-settings',
@@ -23,7 +31,10 @@ export class SettingsComponent implements OnInit {
   protected bridge = inject(ElectronBridgeService);
 
   protected providerStates = signal<Record<string, ProviderFormState>>({});
-  protected activeTab = signal<'translation' | 'stt' | 'assist' | 'display'>('translation');
+  protected activeNode = signal<SettingsNode>('general');
+  // Which provider's config is shown in the Translation → Providers panel. Mirrors
+  // the active provider — selecting one here also makes it the active provider.
+  protected selectedProvider = signal('claude');
   protected saving = signal(false);
   protected saveSuccess = signal(false);
 
@@ -77,11 +88,11 @@ export class SettingsComponent implements OnInit {
         fields,
         validating: false,
         validResult: null,
-        expanded: p.id === this.settingsSvc.activeProvider(),
       };
     }
 
     this.providerStates.set(states);
+    this.selectedProvider.set(this.settingsSvc.activeProvider());
     this.sttProvider.set(settings?.stt.provider ?? 'deepgram');
     this.sttApiKey.set(settings?.stt.apiKey ?? '');
     this.sttEndpoint.set(settings?.stt.endpoint || this.whisperDefaults.endpoint);
@@ -209,11 +220,19 @@ export class SettingsComponent implements OnInit {
     }
   }
 
-  protected toggleExpand(id: string): void {
+  // The translation provider picked in the Providers panel — also becomes the
+  // app's active provider (header dropdown reads the same settings signal).
+  protected selectedProviderMeta(): ProviderMeta | undefined {
+    return this.settingsSvc.providerMeta(this.selectedProvider());
+  }
+
+  protected async onTranslationProviderChange(id: string): Promise<void> {
+    this.selectedProvider.set(id);
     this.providerStates.update((s) => ({
       ...s,
-      [id]: { ...s[id], expanded: !s[id].expanded },
+      [id]: { ...s[id], validResult: null },
     }));
+    await this.settingsSvc.setActiveProvider(id);
   }
 
   protected setField(providerId: string, key: string, value: string): void {
