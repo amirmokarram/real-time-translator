@@ -5,7 +5,7 @@ Desktop app: real-time English→Persian translation of system audio (meetings/v
 - [Collaboration & Environment](collaboration-and-env.md) — how Amir works (plan-first, phase-by-phase), Windows/PowerShell, Node 24.13, project paths
 - [Project Architecture](project-architecture.md) — Angular+Electron split, IPC bridge, subsystems map, broadcast pattern, build commands, TS isolation
 - [Translation Providers](translation-providers.md) — 7 providers (incl. local **Ollama**/TranslateGemma, added 2026-06-08), interface, registry, IPC flow, per-provider prompt override, how to add one
-- [Whisper STT Provider](whisper-stt-provider.md) — adding Whisper as 2nd STT (streaming via local WhisperLive WS, renderer-side `ISttStream` strategy); Phase A+B done on `feature/whisper-stt-provider` (in progress 2026-06-18)
+- [Whisper STT Provider](whisper-stt-provider.md) — Whisper as 2nd STT (streaming via local WhisperLive WS, renderer-side `ISttStream` strategy). **Done, merged to `main` & pushed 2026-06-24, tested live/working** on RTX 3070 + `large-v3` (needed a patched WhisperLive GPU image — CUDA 12 fix; see gotchas)
 - **Assist mode** (in [phase-status.md](phase-status.md) Phase 5) — `electron/assist/` mirrors translation: `IAssistProvider`, registry, `assist:ask`/`assist:validate` IPC; 4 providers (Claude, OpenAI, Ollama, OpenAI-compatible/DMR); slide-in panel in app shell; selection→Ask, header→free chat
 - [Gotchas & Lessons](gotchas-and-lessons.md) — hard-won non-obvious fixes (Web Speech fails in Electron, flex :host, LibreTranslate Content-Length, click-through). READ BEFORE DEBUGGING.
 - [Phase Status](phase-status.md) — Phases 1–5 done (5 = assist mode); remaining: system tray+hotkeys, package installer. Git state + `feature/assist-mode` branch.
