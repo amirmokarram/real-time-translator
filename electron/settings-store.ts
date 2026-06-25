@@ -23,6 +23,11 @@ export interface AppSettings {
     endpoint: string;       // Whisper only: WhisperLive WebSocket URL (ws://host:port)
     model: string;          // Whisper only: model size/name the server should load
     useVad: boolean;        // Whisper only: let the server gate on voice activity
+    // ── Latency tuning (lower = snappier, but more fragmented/less accurate) ──
+    endpointingMs: number;     // DeepGram only: silence (ms) before a fragment is finalized
+    utteranceEndMs: number;    // DeepGram only: end-of-utterance backstop (ms); API floor is 1000
+    sentenceMaxWaitMs: number; // both: idle fallback (ms) committing an un-punctuated tail
+    commitOnClause: boolean;   // both: also split rows on , ; : — not just . ! ?
   };
   // Assist mode reuses the matching translation provider's API key; only the
   // provider choice and model live here. endpoint is used by Ollama (local).
@@ -64,6 +69,10 @@ const defaults: AppSettings = {
     endpoint: 'ws://localhost:9090',
     model: 'small',
     useVad: true,
+    endpointingMs: 800,
+    utteranceEndMs: 1000,
+    sentenceMaxWaitMs: 4000,
+    commitOnClause: false,
   },
   assist: {
     provider: 'claude',

@@ -58,14 +58,13 @@ export class DeepGramStream implements ISttStream {
         language: this.opts.language.split('-')[0],   // 'en-US' → 'en'
         interim_results: 'true',
         smart_format: 'true',
-        // Require ~800ms of silence before declaring end-of-speech. Shorter
-        // values (e.g. the 10ms default) fire speech_final on mid-sentence
-        // clause pauses, splitting one sentence across multiple rows so each
-        // row looks truncated. 800ms aligns the boundary with real sentence ends.
-        endpointing: '800',
-        // Backstop: emit an UtteranceEnd event after 1s of silence even if
-        // speech_final never fired (e.g. continuous speech then a stop).
-        utterance_end_ms: '1000',
+        // Silence (ms) before declaring end-of-speech. Lower = snappier but more
+        // mid-sentence splits; the default 800ms aligns the boundary with real
+        // sentence ends. User-tunable via Settings → Speech Recognition.
+        endpointing: String(this.opts.endpointingMs ?? 800),
+        // Backstop: emit an UtteranceEnd event after this much silence even if
+        // speech_final never fired. DeepGram's API floor for this value is 1000ms.
+        utterance_end_ms: String(Math.max(1000, this.opts.utteranceEndMs ?? 1000)),
         vad_events: 'true',
       });
 

@@ -28,7 +28,11 @@ export interface ProviderSettings {
 export interface AppSettings {
   activeProvider: string;
   providers: Record<string, ProviderSettings>;
-  stt: { provider: string; apiKey: string; language: string; endpoint: string; model: string; useVad: boolean };
+  stt: {
+    provider: string; apiKey: string; language: string; endpoint: string; model: string; useVad: boolean;
+    // Latency tuning — see settings-store.ts for semantics.
+    endpointingMs: number; utteranceEndMs: number; sentenceMaxWaitMs: number; commitOnClause: boolean;
+  };
   assist: { provider: string; model: string; endpoint: string };
   prompts: { assist: string; translation: string };
   audio: { selectedSourceId: string | null };

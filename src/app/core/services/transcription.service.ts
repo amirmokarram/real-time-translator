@@ -35,9 +35,23 @@ export class TranscriptionService {
   private pendingFinal = '';
   private sentenceTimer: ReturnType<typeof setTimeout> | null = null;
 
+  // ── Latency tuning (configured from settings in start()) ───────────────────────
   // Safety net: commit a trailing fragment that never got terminal punctuation
   // (rare, since smart_format usually adds it) after this much idle time.
-  private static readonly SENTENCE_MAX_WAIT_MS = 4000;
+  private sentenceMaxWaitMs = 4000;
+  // Punctuation that ends a row. Default is sentence-terminal only; with
+  // commitOnClause the user also splits on clause punctuation for snappier rows.
+  private sentenceRe = TranscriptionService.buildSentenceRe(false);
+  private endsRe = TranscriptionService.buildEndsRe(false);
+
+  private static buildSentenceRe(clause: boolean): RegExp {
+    const p = clause ? '.!?,;:' : '.!?';
+    return new RegExp(`^\\s*(.+?[${p}]["')\\]]?)\\s+(?=\\S)`, 's');
+  }
+  private static buildEndsRe(clause: boolean): RegExp {
+    const p = clause ? '.!?,;:' : '.!?';
+    return new RegExp(`[${p}]["')\\]]?\\s*$`);
+  }
 
   // Semantic events from whichever backend is streaming. The protocol-specific
   // parsing lives in the strategy; here we only do sentence segmentation.
@@ -62,6 +76,12 @@ export class TranscriptionService {
     const stt = this.settings.settings()?.stt;
     this.error.set(null);
 
+    // Apply latency-tuning knobs for this session.
+    this.sentenceMaxWaitMs = stt?.sentenceMaxWaitMs ?? 4000;
+    const clause = stt?.commitOnClause ?? false;
+    this.sentenceRe = TranscriptionService.buildSentenceRe(clause);
+    this.endsRe = TranscriptionService.buildEndsRe(clause);
+
     if (stt?.provider === 'whisper') {
       const endpoint = stt.endpoint?.trim() ?? '';
       if (!endpoint) {
@@ -79,7 +99,11 @@ export class TranscriptionService {
         throw new Error('DeepGram API key is missing. Go to Settings → Speech Recognition to add it.');
       }
       this.stream = new DeepGramStream();
-      await this.stream.start(stream, { language: lang, apiKey }, this.callbacks);
+      await this.stream.start(
+        stream,
+        { language: lang, apiKey, endpointingMs: stt?.endpointingMs, utteranceEndMs: stt?.utteranceEndMs },
+        this.callbacks,
+      );
     }
 
     this.isRunning.set(true);
@@ -101,7 +125,7 @@ export class TranscriptionService {
   // next one. Leaving the trailing (possibly unfinished) sentence in the buffer
   // avoids splitting on a "." that's really a decimal/abbreviation mid-flow.
   private drainSentences(): void {
-    const re = /^\s*(.+?[.!?]["')\]]?)\s+(?=\S)/s;
+    const re = this.sentenceRe;
     let m: RegExpExecArray | null;
     while ((m = re.exec(this.pendingFinal)) !== null) {
       const sentence = m[1].trim();
@@ -147,7 +171,7 @@ export class TranscriptionService {
 
   private endsSentence(text: string): boolean {
     // Allow a trailing closing quote/bracket after the punctuation.
-    return /[.!?]["')\]]?\s*$/.test(text);
+    return this.endsRe.test(text);
   }
 
   // The live English line = uncommitted finalized text plus the in-flight tail.
@@ -165,7 +189,7 @@ export class TranscriptionService {
     this.clearSentenceTimer();
     this.sentenceTimer = setTimeout(
       () => this.commitRemainder(),
-      TranscriptionService.SENTENCE_MAX_WAIT_MS,
+      this.sentenceMaxWaitMs,
     );
   }
 

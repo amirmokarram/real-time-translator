@@ -8,6 +8,8 @@ export interface SttStartOptions {
   endpoint?: string;  // Whisper — WhisperLive WebSocket URL
   model?: string;     // Whisper — model name/size the server should load
   useVad?: boolean;   // Whisper — server-side voice-activity gating
+  endpointingMs?: number;  // DeepGram — silence (ms) before a fragment is finalized
+  utteranceEndMs?: number; // DeepGram — end-of-utterance backstop (ms); API floor is 1000
 }
 
 export interface SttCallbacks {
