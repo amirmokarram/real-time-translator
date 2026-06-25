@@ -15,7 +15,7 @@ renderer through the real IPC bridge. Started 2026-06-25 (first repo tests; Phas
 launches the deterministic app, opens DevTools, injects `window.__e2e.say()/interim()/final()/end()`
 console helpers to feed transcripts by hand, `page.pause()` holds it open; `e2e/manual.spec.ts`,
 skipped unless `E2E_MANUAL=1`). Config: [`playwright.config.ts`](../../../../D:/Claude-RealTimeTranslator/playwright.config.ts) (serial, 1 worker, Electron via `_electron`).
-CI: `.github/workflows/e2e.yml` (ubuntu, `playwright install-deps chromium` + xvfb, build, `xvfb-run npm run e2e:only`, uploads HTML report). Written but not yet verified on a real Actions run (needs a push).
+CI: `.github/workflows/e2e.yml` (ubuntu, `playwright install-deps chromium` + xvfb, build, `xvfb-run npm run e2e:only`, uploads HTML report). **Verified green on a real Actions run (18 passed, run `28164747036`).** Two CI-only gotchas hit on the way: (1) `npm ci` EUSAGE — Windows lock omitted Linux-only `@emnapi/*` optional deps, fixed by regenerating with `npx npm@11.13.0 install --package-lock-only`; (2) Electron's `@electron/get` postinstall truncates extraction on the runner — fixed by curl+unzip of the release zip (see [[gotchas-and-lessons]]). Don't reintroduce `node install.js` / `~/.cache/electron`.
 
 **Determinism via guarded seams (inert in normal dev/prod):**
 - STT/audio run in the **renderer**, so the transcript seam is renderer-side: `MockSttStream`
