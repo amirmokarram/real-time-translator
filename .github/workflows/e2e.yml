@@ -42,9 +42,14 @@ jobs:
       - name: Ensure Electron binary is installed
         run: |
           set -x
-          rm -rf node_modules/electron/dist node_modules/electron/path.txt
-          force_no_cache=true node node_modules/electron/install.js; echo "install.js exit=$?"
-          ls -la node_modules/electron/ || true
+          node node_modules/electron/install.js || echo "install.js exit=$?"
+          find node_modules/electron/dist -maxdepth 2 | head -40 || true
+          # install.js can leave dist/ extracted but never write path.txt on the
+          # runner; create it when the binary is actually present.
+          if [ ! -f node_modules/electron/path.txt ] && [ -x node_modules/electron/dist/electron ]; then
+            printf electron > node_modules/electron/path.txt
+          fi
+          test -x node_modules/electron/dist/electron
           test -f node_modules/electron/path.txt
 
       # Electron is a Chromium app — pull in its shared libraries (handles the
