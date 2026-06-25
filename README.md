@@ -31,7 +31,7 @@ Built with Angular 21 + Electron 42. Persian-first UI (Vazirmatn font, RTL, dark
 | UI | Angular 21 (standalone components, signals, `@if`/`@for`) |
 | Desktop shell | Electron 42 |
 | Speech-to-text | Deepgram (cloud) or WhisperLive (local) — streaming WebSocket |
-| Translation | Claude, Google, DeepL, Microsoft, OpenAI, LibreTranslate |
+| Translation | Claude, Google, DeepL, Microsoft, OpenAI, LibreTranslate, Ollama |
 | Assist / LLM | Claude, OpenAI, Ollama, OpenAI-compatible (e.g. Docker Model Runner) |
 | Markdown | `marked` + `DOMPurify` |
 
@@ -44,16 +44,19 @@ Built with Angular 21 + Electron 42. Persian-first UI (Vazirmatn font, RTL, dark
 - Translation events are **broadcast to all windows**, so the overlay mirrors the main window automatically.
 - Settings persist to `userData/settings.json`.
 - Providers follow a registry pattern: translation providers in `electron/translation/`, assist providers in `electron/assist/`.
+- **STT streaming is the exception** — it runs in the renderer (browser `WebSocket`) behind an `ISttStream` strategy in `core/services/stt/`, with Deepgram and Whisper implementations.
 
 ```
 electron/            Main process: window, IPC, providers, prompts, settings store
-  translation/       Translation provider interface + 6 implementations + registry
+  translation/       Translation provider interface + 7 implementations + registry
   assist/            Assist provider interface + 4 implementations + registry
   prompts.ts         Default + custom system prompts
 src/app/
   features/          translator, settings, overlay, assist (slide-in panel)
   core/services/     audio, transcription, translation, assist, settings, bridge
+    stt/             ISttStream strategy: Deepgram + Whisper (+ mock for tests)
   shared/            header, markdown pipe
+e2e/                 Playwright end-to-end test suite
 ```
 
 ---
@@ -122,6 +125,24 @@ npm run electron:build
 npm run electron:dist:win     # Windows
 npm run electron:dist:mac     # macOS
 npm run electron:dist:linux   # Linux
+```
+
+---
+
+## Testing
+
+End-to-end tests run the packaged Electron app with [Playwright](https://playwright.dev). Network-dependent seams are replaced by deterministic doubles — a renderer-side mock STT stream and a main-side echo provider — so the full capture → transcribe → translate → display pipeline can be exercised offline without API keys.
+
+```bash
+# Build, then run the E2E suite
+npm run e2e
+
+# Run against an existing build (skip the rebuild)
+npm run e2e:only
+
+# Interactive / debugging
+npm run e2e:headed   # headed browser
+npm run e2e:ui       # Playwright UI mode
 ```
 
 ---
