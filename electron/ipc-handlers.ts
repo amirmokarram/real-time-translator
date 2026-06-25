@@ -91,6 +91,29 @@ export function registerIpcHandlers(
     return result;
   });
 
+  // ── Partial/preview translate (live-partial feature) ───────────────────────
+  // Translates in-progress speech for the live preview. Deliberately does NOT
+  // broadcast (keeps the overlay on committed rows only) and does NOT stream
+  // chunks (so it can't contaminate a concurrent committed translate's stream).
+  ipcMain.handle('translation:translate-partial', async (_event, payload: unknown) => {
+    const { text, providerId } = payload as { text: string; providerId: string };
+    const settings = settingsStore.get();
+    const providerSettings = settings.providers[providerId] ?? {};
+    const provider = registry.get(providerId);
+    if (!provider) throw new Error(`Unknown provider: ${providerId}`);
+
+    const request: TranslationRequest = {
+      text,
+      sourceLang: 'en',
+      targetLang: 'fa',
+      systemPrompt: providerSettings.prompt?.trim() || settings.prompts?.translation,
+    };
+
+    const result = await provider.translate(request, providerSettings);
+    result.translatedText = collapseTerminalPunctuation(result.translatedText);
+    return result;
+  });
+
   // ── Validate provider config ────────────────────────────────────────────────
   ipcMain.handle('translation:validate', async (_event, payload: unknown) => {
     const { providerId } = payload as { providerId: string };
@@ -152,6 +175,15 @@ export function registerIpcHandlers(
   // ── Export history to file ──────────────────────────────────────────────────
   ipcMain.handle('export:save', async (_event, payload: unknown) => {
     const { content, defaultName } = payload as { content: string; defaultName: string };
+
+    // E2E only: skip the native save dialog and write to a fixed path so a test
+    // can read back and assert the exported content.
+    const e2ePath = process.env['TRANSLATOR_E2E'] && process.env['TRANSLATOR_E2E_EXPORT_PATH'];
+    if (e2ePath) {
+      await fs.writeFile(e2ePath, content, 'utf-8');
+      return { saved: true, path: e2ePath };
+    }
+
     const result = await dialog.showSaveDialog(win, {
       defaultPath: defaultName,
       filters: [

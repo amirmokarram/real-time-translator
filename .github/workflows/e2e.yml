@@ -1,0 +1,67 @@
+name: e2e
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Cancel superseded runs on the same ref.
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  playwright:
+    name: Playwright (Electron, headless)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # electron's @electron/get postinstall truncates the extraction on this
+      # runner (leaves a partial dist/, never writes path.txt → electron.launch
+      # ENOENT). Fetch the official release zip directly and lay it out ourselves.
+      - name: Install Electron binary
+        run: |
+          VER="$(node -p "require('./node_modules/electron/package.json').version")"
+          curl -fL --retry 5 --retry-all-errors \
+            -o /tmp/electron.zip \
+            "https://github.com/electron/electron/releases/download/v${VER}/electron-v${VER}-linux-x64.zip"
+          rm -rf node_modules/electron/dist
+          unzip -q /tmp/electron.zip -d node_modules/electron/dist
+          printf electron > node_modules/electron/path.txt
+          test -x node_modules/electron/dist/electron
+          echo "Electron ${VER} installed"
+
+      # Electron is a Chromium app — pull in its shared libraries (handles the
+      # package-name differences across Ubuntu releases) plus a virtual display.
+      - name: Install Electron system deps + xvfb
+        run: |
+          npx playwright install-deps chromium
+          sudo apt-get install -y xvfb
+
+      - name: Build renderer + Electron
+        run: npm run electron:build
+
+      # Electron needs an X server; the fake-media launch flags supply audio.
+      - name: Run e2e tests
+        run: xvfb-run -a npm run e2e:only
+
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14
+          if-no-files-found: ignore

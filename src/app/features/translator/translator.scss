@@ -330,6 +330,12 @@
   overflow-y: auto;
 }
 
+// When the live Persian preview is shown, split EN | FA like the history rows.
+.live-cell-fa {
+  border-left: 1px solid var(--border);
+  text-align: right;
+}
+
 .translating-pill {
   display: inline-flex;
   align-items: center;

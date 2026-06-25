@@ -43,6 +43,11 @@ export class TranslatorComponent implements OnInit, OnDestroy {
   private sttQueue: string[] = [];
   private draining = false;
 
+  // Live partial translation (Phase B): debounce-translate the in-progress
+  // English so the reader can follow along before the sentence finalizes.
+  private partialTimer: ReturnType<typeof setTimeout> | null = null;
+  private lastPartialText = '';
+
   @ViewChild('historyContainer') historyContainer!: ElementRef<HTMLDivElement>;
 
   constructor() {
@@ -52,9 +57,18 @@ export class TranslatorComponent implements OnInit, OnDestroy {
       untracked(() => {
         const sentences = this.transcription.takePending();
         if (sentences.length === 0) return;
+        // The committed row supersedes the live preview for this sentence.
+        this.translation.clearLivePartial();
+        this.lastPartialText = '';
         this.sttQueue.push(...sentences);
         this.drainSttQueue();
       });
+    });
+
+    // Live preview: debounce-translate the un-committed English (opt-in).
+    effect(() => {
+      const interim = this.transcription.interimText();
+      untracked(() => this.schedulePartial(interim));
     });
 
     // Scroll to bottom after DOM renders the new history row
@@ -74,6 +88,7 @@ export class TranslatorComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    if (this.partialTimer) clearTimeout(this.partialTimer);
     if (this.audio.isCapturing()) this.audio.stopCapture();
   }
 
@@ -93,6 +108,28 @@ export class TranslatorComponent implements OnInit, OnDestroy {
     } catch (err: unknown) {
       this.error.set(err instanceof Error ? err.message : 'Translation failed');
     }
+  }
+
+  // Debounce a live-preview translation of the in-progress English. Skips when
+  // the feature is off, not capturing, the text is trivial, or unchanged.
+  private schedulePartial(interim: string): void {
+    if (this.partialTimer) { clearTimeout(this.partialTimer); this.partialTimer = null; }
+
+    const stt = this.settings.settings()?.stt;
+    if (!stt?.livePartial || !this.audio.isCapturing()) return;
+
+    const text = interim.trim();
+    if (text.length < 2) {
+      this.translation.livePersian.set('');
+      this.lastPartialText = '';
+      return;
+    }
+    if (text === this.lastPartialText) return;
+
+    this.partialTimer = setTimeout(() => {
+      this.lastPartialText = text;
+      void this.translation.translatePartial(text);
+    }, stt.partialDebounceMs ?? 600);
   }
 
   // Translate queued STT sentences sequentially → one history row each, in order.
@@ -196,6 +233,9 @@ export class TranslatorComponent implements OnInit, OnDestroy {
   protected async toggleCapture(): Promise<void> {
     if (this.audio.isCapturing()) {
       await this.audio.stopCapture();
+      if (this.partialTimer) { clearTimeout(this.partialTimer); this.partialTimer = null; }
+      this.lastPartialText = '';
+      this.translation.clearLivePartial();
     } else {
       await this.audio.startCapture();
     }
@@ -204,6 +244,10 @@ export class TranslatorComponent implements OnInit, OnDestroy {
   // Live panel: show interim while speaking, last final between sentences
   protected get liveEnglish(): string {
     return this.transcription.interimText() || this.transcription.lastFinalText() || '';
+  }
+
+  protected get livePartialEnabled(): boolean {
+    return this.settings.settings()?.stt.livePartial ?? false;
   }
 
   protected get audioBarWidth(): string {

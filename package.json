@@ -16,7 +16,12 @@
     "electron:dist": "npm run electron:build && electron-builder",
     "electron:dist:win": "npm run electron:build && electron-builder --win",
     "electron:dist:mac": "npm run electron:build && electron-builder --mac",
-    "electron:dist:linux": "npm run electron:build && electron-builder --linux"
+    "electron:dist:linux": "npm run electron:build && electron-builder --linux",
+    "e2e": "npm run electron:build && playwright test",
+    "e2e:headed": "npm run electron:build && playwright test --headed",
+    "e2e:only": "playwright test",
+    "e2e:ui": "npm run electron:build && playwright test --ui",
+    "e2e:manual": "npm run electron:build && cross-env E2E_MANUAL=1 playwright test manual --headed"
   },
   "private": true,
   "packageManager": "npm@11.6.2",
@@ -38,6 +43,7 @@
     "@angular/build": "^21.2.13",
     "@angular/cli": "^21.2.13",
     "@angular/compiler-cli": "^21.2.0",
+    "@playwright/test": "^1.61.1",
     "@types/node": "^25.9.1",
     "concurrently": "^10.0.3",
     "cross-env": "^10.1.0",

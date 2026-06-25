@@ -18,7 +18,11 @@ const mockSettings: AppSettings = {
     openai: { model: 'gpt-4o-mini' },
     libretranslate: { endpoint: 'https://libretranslate.com' },
   },
-  stt: { provider: 'deepgram', apiKey: '', language: 'en', endpoint: 'ws://localhost:9090', model: 'small', useVad: true },
+  stt: {
+    provider: 'deepgram', apiKey: '', language: 'en', endpoint: 'ws://localhost:9090', model: 'small', useVad: true,
+    endpointingMs: 800, utteranceEndMs: 1000, sentenceMaxWaitMs: 4000, commitOnClause: false,
+    livePartial: false, partialDebounceMs: 600,
+  },
   assist: { provider: 'claude', model: 'claude-sonnet-4-6', endpoint: 'http://localhost:11434' },
   prompts: { assist: '', translation: '' },
   audio: { selectedSourceId: null },
@@ -75,6 +79,15 @@ export class ElectronBridgeService {
   translate(payload: { text: string; providerId: string }): Promise<TranslationResult> {
     if (this.api) return this.api.translate(payload);
     // Browser mock: echo back
+    return Promise.resolve({
+      translatedText: `[Mock] ${payload.text}`,
+      provider: 'mock',
+      processingTimeMs: 0,
+    });
+  }
+
+  translatePartial(payload: { text: string; providerId: string }): Promise<TranslationResult> {
+    if (this.api) return this.api.translatePartial(payload);
     return Promise.resolve({
       translatedText: `[Mock] ${payload.text}`,
       provider: 'mock',
