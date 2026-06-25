@@ -3,6 +3,7 @@ import { SettingsService } from './settings.service';
 import { ISttStream, SttCallbacks } from './stt/stt-stream';
 import { DeepGramStream } from './stt/deepgram-stream';
 import { WhisperStream } from './stt/whisper-stream';
+import { MockSttStream } from './stt/mock-stream';
 
 @Injectable({ providedIn: 'root' })
 export class TranscriptionService {
@@ -82,7 +83,11 @@ export class TranscriptionService {
     this.sentenceRe = TranscriptionService.buildSentenceRe(clause);
     this.endsRe = TranscriptionService.buildEndsRe(clause);
 
-    if (stt?.provider === 'whisper') {
+    if (stt?.provider === 'mock') {
+      // E2E only: a scripted backend driven by test DOM events (never set by the UI).
+      this.stream = new MockSttStream();
+      await this.stream.start(stream, { language: lang }, this.callbacks);
+    } else if (stt?.provider === 'whisper') {
       const endpoint = stt.endpoint?.trim() ?? '';
       if (!endpoint) {
         throw new Error('Whisper server endpoint is missing. Go to Settings → Speech Recognition to set it.');

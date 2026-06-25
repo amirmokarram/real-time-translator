@@ -175,6 +175,15 @@ export function registerIpcHandlers(
   // ── Export history to file ──────────────────────────────────────────────────
   ipcMain.handle('export:save', async (_event, payload: unknown) => {
     const { content, defaultName } = payload as { content: string; defaultName: string };
+
+    // E2E only: skip the native save dialog and write to a fixed path so a test
+    // can read back and assert the exported content.
+    const e2ePath = process.env['TRANSLATOR_E2E'] && process.env['TRANSLATOR_E2E_EXPORT_PATH'];
+    if (e2ePath) {
+      await fs.writeFile(e2ePath, content, 'utf-8');
+      return { saved: true, path: e2ePath };
+    }
+
     const result = await dialog.showSaveDialog(win, {
       defaultPath: defaultName,
       filters: [
