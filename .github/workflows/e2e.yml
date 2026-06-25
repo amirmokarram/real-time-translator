@@ -28,6 +28,22 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Cache the downloaded Electron binary across runs (keyed on the lock file
+      # so a version bump invalidates it).
+      - name: Cache Electron binary
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/electron
+          key: electron-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      # npm ci does not reliably run electron's postinstall on the runner (no
+      # path.txt → electron.launch ENOENT), so fetch the binary explicitly and
+      # fail loudly if it's still missing.
+      - name: Ensure Electron binary is installed
+        run: |
+          node node_modules/electron/install.js
+          test -f node_modules/electron/path.txt && echo "Electron: $(cat node_modules/electron/path.txt)"
+
       # Electron is a Chromium app — pull in its shared libraries (handles the
       # package-name differences across Ubuntu releases) plus a virtual display.
       - name: Install Electron system deps + xvfb
