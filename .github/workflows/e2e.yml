@@ -37,12 +37,15 @@ jobs:
           key: electron-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
 
       # npm ci does not reliably run electron's postinstall on the runner (no
-      # path.txt → electron.launch ENOENT), so fetch the binary explicitly and
-      # fail loudly if it's still missing.
+      # path.txt → electron.launch ENOENT), so fetch the binary explicitly.
+      # Force a clean download and surface any error, then assert path.txt exists.
       - name: Ensure Electron binary is installed
         run: |
-          node node_modules/electron/install.js
-          test -f node_modules/electron/path.txt && echo "Electron: $(cat node_modules/electron/path.txt)"
+          set -x
+          rm -rf node_modules/electron/dist node_modules/electron/path.txt
+          force_no_cache=true node node_modules/electron/install.js; echo "install.js exit=$?"
+          ls -la node_modules/electron/ || true
+          test -f node_modules/electron/path.txt
 
       # Electron is a Chromium app — pull in its shared libraries (handles the
       # package-name differences across Ubuntu releases) plus a virtual display.
