@@ -28,29 +28,20 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # Cache the downloaded Electron binary across runs (keyed on the lock file
-      # so a version bump invalidates it).
-      - name: Cache Electron binary
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/electron
-          key: electron-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
-
-      # npm ci does not reliably run electron's postinstall on the runner (no
-      # path.txt → electron.launch ENOENT), so fetch the binary explicitly.
-      # Force a clean download and surface any error, then assert path.txt exists.
-      - name: Ensure Electron binary is installed
+      # electron's @electron/get postinstall truncates the extraction on this
+      # runner (leaves a partial dist/, never writes path.txt → electron.launch
+      # ENOENT). Fetch the official release zip directly and lay it out ourselves.
+      - name: Install Electron binary
         run: |
-          set -x
-          node node_modules/electron/install.js || echo "install.js exit=$?"
-          find node_modules/electron/dist -maxdepth 2 | head -40 || true
-          # install.js can leave dist/ extracted but never write path.txt on the
-          # runner; create it when the binary is actually present.
-          if [ ! -f node_modules/electron/path.txt ] && [ -x node_modules/electron/dist/electron ]; then
-            printf electron > node_modules/electron/path.txt
-          fi
+          VER="$(node -p "require('./node_modules/electron/package.json').version")"
+          curl -fL --retry 5 --retry-all-errors \
+            -o /tmp/electron.zip \
+            "https://github.com/electron/electron/releases/download/v${VER}/electron-v${VER}-linux-x64.zip"
+          rm -rf node_modules/electron/dist
+          unzip -q /tmp/electron.zip -d node_modules/electron/dist
+          printf electron > node_modules/electron/path.txt
           test -x node_modules/electron/dist/electron
-          test -f node_modules/electron/path.txt
+          echo "Electron ${VER} installed"
 
       # Electron is a Chromium app — pull in its shared libraries (handles the
       # package-name differences across Ubuntu releases) plus a virtual display.
