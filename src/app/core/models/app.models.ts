@@ -32,6 +32,8 @@ export interface AppSettings {
     provider: string; apiKey: string; language: string; endpoint: string; model: string; useVad: boolean;
     // Latency tuning — see settings-store.ts for semantics.
     endpointingMs: number; utteranceEndMs: number; sentenceMaxWaitMs: number; commitOnClause: boolean;
+    // Phase B — live partial translation.
+    livePartial: boolean; partialDebounceMs: number;
   };
   assist: { provider: string; model: string; endpoint: string };
   prompts: { assist: string; translation: string };
@@ -86,6 +88,8 @@ export interface ElectronAPI {
   startCapture(sourceId: string): Promise<void>;
   stopCapture(): Promise<void>;
   translate(payload: { text: string; providerId: string }): Promise<TranslationResult>;
+  // Live partial preview — same provider, but not broadcast and not streamed.
+  translatePartial(payload: { text: string; providerId: string }): Promise<TranslationResult>;
   assist(payload: { messages: AssistMessage[]; context?: string }): Promise<string>;
   validateAssist(): Promise<{ valid: boolean; error?: string }>;
   getDefaultPrompts(): Promise<{ assist: string; translation: string }>;

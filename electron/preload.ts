@@ -20,6 +20,7 @@ const electronAPI = {
 
   // Translation
   translate: (payload: unknown) => ipcRenderer.invoke('translation:translate', payload),
+  translatePartial: (payload: unknown) => ipcRenderer.invoke('translation:translate-partial', payload),
   validateProvider: (payload: unknown) => ipcRenderer.invoke('translation:validate', payload),
   getAvailableProviders: () => ipcRenderer.invoke('translation:get-providers'),
 

@@ -73,6 +73,8 @@ export class SettingsComponent implements OnInit {
   protected sttUtteranceEndMs = signal(1000);
   protected sttSentenceMaxWaitMs = signal(4000);
   protected sttCommitOnClause = signal(false);
+  protected sttLivePartial = signal(false);
+  protected sttPartialDebounceMs = signal(600);
   protected sttSaving = signal(false);
   protected sttSaved = signal(false);
   protected sttValidating = signal(false);
@@ -107,6 +109,8 @@ export class SettingsComponent implements OnInit {
     this.sttUtteranceEndMs.set(settings?.stt.utteranceEndMs ?? 1000);
     this.sttSentenceMaxWaitMs.set(settings?.stt.sentenceMaxWaitMs ?? 4000);
     this.sttCommitOnClause.set(settings?.stt.commitOnClause ?? false);
+    this.sttLivePartial.set(settings?.stt.livePartial ?? false);
+    this.sttPartialDebounceMs.set(settings?.stt.partialDebounceMs ?? 600);
 
     this.assistProvider.set(settings?.assist.provider ?? 'claude');
     this.assistModel.set(settings?.assist.model ?? '');
@@ -338,6 +342,8 @@ export class SettingsComponent implements OnInit {
       utteranceEndMs: this.sttUtteranceEndMs(),
       sentenceMaxWaitMs: this.sttSentenceMaxWaitMs(),
       commitOnClause: this.sttCommitOnClause(),
+      livePartial: this.sttLivePartial(),
+      partialDebounceMs: this.sttPartialDebounceMs(),
     };
   }
 

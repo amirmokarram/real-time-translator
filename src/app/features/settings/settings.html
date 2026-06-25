@@ -425,6 +425,42 @@
               </button>
             </div>
 
+            <!-- ── Live preview (Phase B) ─────────────────────────────────────── -->
+            <div class="field-divider">
+              <span class="field-divider-label">Live preview</span>
+            </div>
+
+            <div class="field-group field-group-inline">
+              <label class="field-label">Translate speech live as it's spoken</label>
+              <button
+                class="toggle-btn"
+                [class.on]="sttLivePartial()"
+                (click)="sttLivePartial.set(!sttLivePartial())">
+                <span class="toggle-thumb"></span>
+              </button>
+            </div>
+            <p class="field-hint">
+              Shows a live Persian preview that revises until the sentence completes —
+              true follow-along, at the cost of extra translation calls. The committed
+              rows are unchanged.
+            </p>
+
+            @if (sttLivePartial()) {
+              <div class="field-group">
+                <label class="field-label">Preview debounce (ms)</label>
+                <input
+                  class="field-input"
+                  type="number" min="200" step="100"
+                  placeholder="600"
+                  [value]="sttPartialDebounceMs()"
+                  (input)="sttPartialDebounceMs.set(parseNum($any($event.target).value, 600))">
+                <p class="field-hint">
+                  Idle time after the last word before re-translating the preview.
+                  Lower = more responsive but more calls. Default <strong>600</strong>.
+                </p>
+              </div>
+            }
+
             <div class="provider-card-actions">
               <button class="btn-save" [disabled]="sttSaving()" (click)="saveStt()">
                 @if (sttSaving()) { Saving… } @else { Save }

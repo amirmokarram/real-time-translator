@@ -118,6 +118,13 @@
           {{ liveEnglish || 'Listening…' }}
         </p>
       </div>
+      @if (livePartialEnabled) {
+        <div class="live-cell live-cell-fa">
+          <p class="live-text persian-text interim">
+            {{ translation.livePersian() || '…' }}
+          </p>
+        </div>
+      }
     </div>
   } @else {
     <div class="input-area">

@@ -12,6 +12,12 @@ export class TranslationService {
   readonly streamingPersian = signal('');
   readonly history = signal<TranslationEntry[]>([]);
 
+  // Live partial preview: the Persian for the in-progress (un-committed) sentence,
+  // revised as more words arrive. Cleared when the sentence commits to history.
+  readonly livePersian = signal('');
+  // Monotonic id so a slow partial response can't overwrite a newer one (or a commit).
+  private partialGen = 0;
+
   private unsubChunk: (() => void) | null = null;
 
   async translate(englishText: string): Promise<TranslationResult> {
@@ -58,6 +64,30 @@ export class TranslationService {
       this.unsubChunk = null;
       this.isTranslating.set(false);
     }
+  }
+
+  // Translate in-progress speech for the live preview. Best-effort: errors are
+  // swallowed (the committed row surfaces real failures), and a stale response is
+  // dropped if a newer partial — or a commit via clearLivePartial() — has since run.
+  async translatePartial(englishText: string): Promise<void> {
+    const text = englishText.trim();
+    if (!text) { this.livePersian.set(''); return; }
+
+    const gen = ++this.partialGen;
+    const providerId = this.settings.activeProvider();
+    try {
+      const result = await this.bridge.translatePartial({ text, providerId });
+      if (gen === this.partialGen) this.livePersian.set(result.translatedText);
+    } catch {
+      /* preview is best-effort — ignore */
+    }
+  }
+
+  // Drop the live preview and invalidate any in-flight partial (called when the
+  // sentence commits to history, or capture stops).
+  clearLivePartial(): void {
+    this.partialGen++;
+    this.livePersian.set('');
   }
 
   clearHistory(): void {

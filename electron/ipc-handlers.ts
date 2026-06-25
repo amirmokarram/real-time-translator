@@ -91,6 +91,29 @@ export function registerIpcHandlers(
     return result;
   });
 
+  // ── Partial/preview translate (live-partial feature) ───────────────────────
+  // Translates in-progress speech for the live preview. Deliberately does NOT
+  // broadcast (keeps the overlay on committed rows only) and does NOT stream
+  // chunks (so it can't contaminate a concurrent committed translate's stream).
+  ipcMain.handle('translation:translate-partial', async (_event, payload: unknown) => {
+    const { text, providerId } = payload as { text: string; providerId: string };
+    const settings = settingsStore.get();
+    const providerSettings = settings.providers[providerId] ?? {};
+    const provider = registry.get(providerId);
+    if (!provider) throw new Error(`Unknown provider: ${providerId}`);
+
+    const request: TranslationRequest = {
+      text,
+      sourceLang: 'en',
+      targetLang: 'fa',
+      systemPrompt: providerSettings.prompt?.trim() || settings.prompts?.translation,
+    };
+
+    const result = await provider.translate(request, providerSettings);
+    result.translatedText = collapseTerminalPunctuation(result.translatedText);
+    return result;
+  });
+
   // ── Validate provider config ────────────────────────────────────────────────
   ipcMain.handle('translation:validate', async (_event, payload: unknown) => {
     const { providerId } = payload as { providerId: string };

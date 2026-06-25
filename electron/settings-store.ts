@@ -28,6 +28,11 @@ export interface AppSettings {
     utteranceEndMs: number;    // DeepGram only: end-of-utterance backstop (ms); API floor is 1000
     sentenceMaxWaitMs: number; // both: idle fallback (ms) committing an un-punctuated tail
     commitOnClause: boolean;   // both: also split rows on , ; : — not just . ! ?
+    // Phase B — live partial translation: translate in-progress (un-committed)
+    // speech on a debounce, showing a live row that revises until the sentence
+    // finalizes. More translation calls; the preview is non-broadcast (not in overlay).
+    livePartial: boolean;      // both: enable the live preview translation
+    partialDebounceMs: number; // both: idle (ms) after the last word before translating the partial
   };
   // Assist mode reuses the matching translation provider's API key; only the
   // provider choice and model live here. endpoint is used by Ollama (local).
@@ -73,6 +78,8 @@ const defaults: AppSettings = {
     utteranceEndMs: 1000,
     sentenceMaxWaitMs: 4000,
     commitOnClause: false,
+    livePartial: false,
+    partialDebounceMs: 600,
   },
   assist: {
     provider: 'claude',
