@@ -9,3 +9,4 @@ Desktop app: real-time English→Persian translation of system audio (meetings/v
 - **Assist mode** (in [phase-status.md](phase-status.md) Phase 5) — `electron/assist/` mirrors translation: `IAssistProvider`, registry, `assist:ask`/`assist:validate` IPC; 4 providers (Claude, OpenAI, Ollama, OpenAI-compatible/DMR); slide-in panel in app shell; selection→Ask, header→free chat
 - [Gotchas & Lessons](gotchas-and-lessons.md) — hard-won non-obvious fixes (Web Speech fails in Electron, flex :host, LibreTranslate Content-Length, click-through). READ BEFORE DEBUGGING.
 - [Phase Status](phase-status.md) — Phases 1–5 done (5 = assist mode); remaining: system tray+hotkeys, package installer. Git state + `feature/assist-mode` branch.
+- [E2E Testing](e2e-testing.md) — Playwright E2E (first repo tests, started 2026-06-25). Deterministic guarded seams (MockSttStream renderer-side, EchoProvider main-side); `npm run e2e`. Phase A done & green; B/C/D pending.
