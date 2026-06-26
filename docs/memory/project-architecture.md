@@ -16,7 +16,7 @@ Real-time system-audio desktop translator built with Angular 21 + Electron 42. *
 - Electron 42 — desktop shell
 - DeepGram / Whisper — streaming speech-to-text (the **source** language drives STT)
 - Switchable translation providers — see [[translation-providers]]
-- Configurable languages: curated catalog in `src/app/core/models/languages.ts` (renderer) + `electron/languages.ts` (main); `settings.languages.{source,target}` (ISO-639-1). Per-cell text direction/font driven by each language's `rtl` flag (Vazirmatn for RTL); dark theme via CSS vars in `src/styles.scss`
+- Configurable languages: curated catalog with a **single source of truth** `src/app/core/models/languages.json` (renderer imports it; the build copies it to `dist-electron/config/` for the main loader `electron/languages.ts` to read at runtime); `settings.languages.{source,target}` (ISO-639-1). Per-cell text direction/font driven by each language's `rtl` flag (Vazirmatn for RTL); dark theme via CSS vars in `src/styles.scss`
 
 **Key architectural decisions:**
 - All translation API calls happen in Electron **main process** (API keys never reach renderer)

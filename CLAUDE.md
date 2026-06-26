@@ -9,7 +9,7 @@ Cross-platform desktop app for **real-time translation of system audio** (meetin
 - **Electron 42** — desktop shell
 - 2 switchable streaming STT providers: **DeepGram** (cloud, WebSocket) and **Whisper** (local, WhisperLive WebSocket) — renderer-side `ISttStream` strategy
 - 7 switchable translation providers: Claude, Google, DeepL, Microsoft, OpenAI, LibreTranslate, Ollama (local)
-- Configurable source/target languages from a curated catalog (`src/app/core/models/languages.ts` + `electron/languages.ts`); per-cell text direction/font driven by each language's `rtl` flag (Vazirmatn for RTL)
+- Configurable source/target languages from a curated catalog — **single source of truth `src/app/core/models/languages.json`** (renderer imports it; the build copies it to `dist-electron/config/` so the main process reads it at runtime via `electron/languages.ts`); per-cell text direction/font driven by each language's `rtl` flag (Vazirmatn for RTL)
 - Dark theme; Vazirmatn font for Persian/RTL text
 
 ## Architecture (key rules)
@@ -18,7 +18,7 @@ Cross-platform desktop app for **real-time translation of system audio** (meetin
 - Renderer ↔ main via secure IPC bridge (`contextBridge` + `electron/preload.ts`, typed `ElectronAPI`).
 - Router uses **HashLocationStrategy** (required for `file://` prod load; also how the overlay targets `#/overlay`).
 - Translation events (`translation:source`/`:chunk`/`:complete`) are **broadcast to all windows** so the overlay mirrors the main window for free.
-- Settings persist to `userData/settings.json`.
+- Settings persist to `userData/settings.json`. The `AppSettings` schema is defined once in `shared/app-settings.d.ts` (shared across both TS contexts); defaults live in `electron/config/default-settings.json`.
 - TS isolation: `tsconfig.app.json` (renderer, browser types) vs `tsconfig.electron.json` (main, CommonJS/Node).
 
 ## Build & run (Windows / PowerShell)
