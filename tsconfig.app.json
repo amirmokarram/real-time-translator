@@ -5,10 +5,12 @@
   "compilerOptions": {
     "outDir": "./out-tsc/app",
     "rootDir": "./src",
+    "resolveJsonModule": true,
     "types": []
   },
   "include": [
-    "src/**/*.ts"
+    "src/**/*.ts",
+    "shared/**/*.d.ts"
   ],
   "exclude": [
     "src/**/*.spec.ts"

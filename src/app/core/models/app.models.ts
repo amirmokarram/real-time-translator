@@ -18,29 +18,11 @@ export interface ProviderMeta {
 
 // ── Settings ──────────────────────────────────────────────────────────────────
 
-export interface ProviderSettings {
-  apiKey?: string;
-  model?: string;
-  region?: string;
-  endpoint?: string;
-}
-
-export interface AppSettings {
-  activeProvider: string;
-  providers: Record<string, ProviderSettings>;
-  languages: { source: string; target: string };
-  stt: {
-    provider: string; apiKey: string; endpoint: string; model: string; useVad: boolean;
-    // Latency tuning — see settings-store.ts for semantics.
-    endpointingMs: number; utteranceEndMs: number; sentenceMaxWaitMs: number; commitOnClause: boolean;
-    // Phase B — live partial translation.
-    livePartial: boolean; partialDebounceMs: number;
-  };
-  assist: { provider: string; model: string; endpoint: string };
-  prompts: { assist: string; translation: string };
-  audio: { selectedSourceId: string | null };
-  display: { fontSize: number; showInterimResults: boolean; historyLength: number };
-}
+// AppSettings / ProviderSettings are defined once in shared/app-settings.d.ts
+// (shared with the Electron main process) and re-exported here so renderer code
+// can keep importing them from this models barrel.
+import type { AppSettings, ProviderSettings } from '../../../../shared/app-settings';
+export type { AppSettings, ProviderSettings };
 
 // ── Assist mode ─────────────────────────────────────────────────────────────
 

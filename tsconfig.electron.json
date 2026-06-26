@@ -13,6 +13,6 @@
     "moduleResolution": "Node",
     "types": ["node"]
   },
-  "include": ["electron/**/*"],
+  "include": ["electron/**/*", "shared/**/*.d.ts"],
   "exclude": ["node_modules", "dist", "dist-electron", "src"]
 }

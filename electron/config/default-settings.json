@@ -1,0 +1,34 @@
+{
+  "activeProvider": "claude",
+  "providers": {
+    "claude": { "model": "claude-sonnet-4-6" },
+    "google": {},
+    "deepl": {},
+    "microsoft": { "region": "eastus" },
+    "openai": { "model": "gpt-4o-mini" },
+    "libretranslate": { "endpoint": "http://localhost:5000" },
+    "ollama": { "model": "", "endpoint": "http://localhost:11434" }
+  },
+  "languages": { "source": "en", "target": "fa" },
+  "stt": {
+    "provider": "deepgram",
+    "apiKey": "",
+    "endpoint": "ws://localhost:9090",
+    "model": "small",
+    "useVad": true,
+    "endpointingMs": 800,
+    "utteranceEndMs": 1000,
+    "sentenceMaxWaitMs": 4000,
+    "commitOnClause": false,
+    "livePartial": false,
+    "partialDebounceMs": 600
+  },
+  "assist": {
+    "provider": "claude",
+    "model": "claude-sonnet-4-6",
+    "endpoint": "http://localhost:11434"
+  },
+  "prompts": { "assist": "", "translation": "" },
+  "audio": { "selectedSourceId": null },
+  "display": { "fontSize": 16, "showInterimResults": true, "historyLength": 50 }
+}

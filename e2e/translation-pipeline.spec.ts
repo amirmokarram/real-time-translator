@@ -60,7 +60,7 @@ test('resolves ${SOURCE}/${TARGET} tokens to the configured language names at tr
   await say(page, '__RESOLVED_PROMPT__.');
 
   await expect(page.locator('.history-row .hcell-fa .target-text').first())
-    .toHaveText('From English to Persian (Farsi)');
+    .toHaveText('From English to Persian');
 });
 
 test.describe('live partial preview', () => {

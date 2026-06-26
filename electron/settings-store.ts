@@ -2,111 +2,17 @@ import { app } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs/promises';
 import { isLegacyDefaultTranslationPrompt } from './prompts';
+import type { AppSettings, ProviderSettings } from '../shared/app-settings';
+// Default settings live in data, not code. Imported as JSON so it's type-checked
+// against AppSettings at compile time (missing/mistyped fields = build error). The
+// build copy step also ships it to dist-electron/config/ for the packaged app.
+import defaultSettings from './config/default-settings.json';
 
-export interface ProviderSettings {
-  apiKey?: string;
-  model?: string;
-  region?: string;
-  endpoint?: string;
-  // Optional per-provider translation system prompt. Empty/undefined → fall back
-  // to the global settings.prompts.translation (then the built-in default).
-  prompt?: string;
-}
+// Re-exported so existing `from './settings-store'` imports keep resolving; the
+// canonical definition lives in shared/app-settings.d.ts (shared with the renderer).
+export type { AppSettings, ProviderSettings };
 
-export interface AppSettings {
-  activeProvider: string;
-  providers: Record<string, ProviderSettings>;
-  // The translation direction. `source` drives STT and the "from" side; `target`
-  // drives the translation "to" side. Codes are ISO-639-1 (see electron/languages.ts).
-  languages: {
-    source: string;
-    target: string;
-  };
-  stt: {
-    provider: string;       // 'deepgram' (cloud streaming) | 'whisper' (local streaming)
-    apiKey: string;         // DeepGram key; unused by the local Whisper server
-    endpoint: string;       // Whisper only: WhisperLive WebSocket URL (ws://host:port)
-    model: string;          // Whisper only: model size/name the server should load
-    useVad: boolean;        // Whisper only: let the server gate on voice activity
-    // ── Latency tuning (lower = snappier, but more fragmented/less accurate) ──
-    endpointingMs: number;     // DeepGram only: silence (ms) before a fragment is finalized
-    utteranceEndMs: number;    // DeepGram only: end-of-utterance backstop (ms); API floor is 1000
-    sentenceMaxWaitMs: number; // both: idle fallback (ms) committing an un-punctuated tail
-    commitOnClause: boolean;   // both: also split rows on , ; : — not just . ! ?
-    // Phase B — live partial translation: translate in-progress (un-committed)
-    // speech on a debounce, showing a live row that revises until the sentence
-    // finalizes. More translation calls; the preview is non-broadcast (not in overlay).
-    livePartial: boolean;      // both: enable the live preview translation
-    partialDebounceMs: number; // both: idle (ms) after the last word before translating the partial
-  };
-  // Assist mode reuses the matching translation provider's API key; only the
-  // provider choice and model live here. endpoint is used by Ollama (local).
-  assist: {
-    provider: string;
-    model: string;
-    endpoint: string;
-  };
-  // Custom system prompts. Empty string → use the built-in default (see prompts.ts).
-  prompts: {
-    assist: string;
-    translation: string;
-  };
-  audio: {
-    selectedSourceId: string | null;
-  };
-  display: {
-    fontSize: number;
-    showInterimResults: boolean;
-    historyLength: number;
-  };
-}
-
-const defaults: AppSettings = {
-  activeProvider: 'claude',
-  providers: {
-    claude: { model: 'claude-sonnet-4-6' },
-    google: {},
-    deepl: {},
-    microsoft: { region: 'eastus' },
-    openai: { model: 'gpt-4o-mini' },
-    libretranslate: { endpoint: 'http://localhost:5000' },
-    ollama: { model: '', endpoint: 'http://localhost:11434' },
-  },
-  languages: {
-    source: 'en',
-    target: 'fa',
-  },
-  stt: {
-    provider: 'deepgram',
-    apiKey: '',
-    endpoint: 'ws://localhost:9090',
-    model: 'small',
-    useVad: true,
-    endpointingMs: 800,
-    utteranceEndMs: 1000,
-    sentenceMaxWaitMs: 4000,
-    commitOnClause: false,
-    livePartial: false,
-    partialDebounceMs: 600,
-  },
-  assist: {
-    provider: 'claude',
-    model: 'claude-sonnet-4-6',
-    endpoint: 'http://localhost:11434',
-  },
-  prompts: {
-    assist: '',
-    translation: '',
-  },
-  audio: {
-    selectedSourceId: null,
-  },
-  display: {
-    fontSize: 16,
-    showInterimResults: true,
-    historyLength: 50,
-  },
-};
+const defaults: AppSettings = defaultSettings;
 
 export class SettingsStore {
   private filePath: string = '';
