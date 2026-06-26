@@ -35,13 +35,25 @@
       </li>
 
       <li>
-        <button class="tree-item tree-leaf-top" [class.active]="activeNode() === 'stt'" (click)="activeNode.set('stt')">
+        <div class="tree-group-label">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
             <path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8"/>
           </svg>
           Speech Recognition
-        </button>
+        </div>
+        <ul class="tree-children">
+          <li>
+            <button class="tree-item" [class.active]="activeNode() === 'stt-engine'" (click)="activeNode.set('stt-engine')">
+              Engine
+            </button>
+          </li>
+          <li>
+            <button class="tree-item" [class.active]="activeNode() === 'stt-segmentation'" (click)="activeNode.set('stt-segmentation')">
+              Segmentation
+            </button>
+          </li>
+        </ul>
       </li>
 
       <li>
@@ -264,8 +276,8 @@
       </section>
     }
 
-    <!-- ── Speech Recognition ───────────────────────────────────────────────── -->
-    @if (activeNode() === 'stt') {
+    <!-- ── Speech Recognition · Engine ──────────────────────────────────────── -->
+    @if (activeNode() === 'stt-engine') {
       <section class="settings-section">
         <h2 class="section-title">Speech Recognition</h2>
         <p class="section-desc">
@@ -368,16 +380,16 @@
               </div>
             }
 
-            <!-- ── Latency tuning ─────────────────────────────────────────────── -->
-            <div class="field-divider">
-              <span class="field-divider-label">Latency tuning</span>
-            </div>
-            <p class="field-hint">
-              Lower values make translations appear sooner, at the cost of more
-              fragmented rows and occasional mid-sentence splits.
-            </p>
-
+            <!-- ── Latency tuning (DeepGram only) ───────────────────────────────── -->
             @if (!isWhisper()) {
+              <div class="field-divider">
+                <span class="field-divider-label">Latency tuning</span>
+              </div>
+              <p class="field-hint">
+                Lower values make transcripts finalize sooner, at the cost of more
+                fragmented rows and occasional mid-sentence splits.
+              </p>
+
               <div class="field-group">
                 <label class="field-label">Endpointing (ms) — silence before a phrase is finalized</label>
                 <input
@@ -401,6 +413,86 @@
               </div>
             }
 
+            <div class="provider-card-actions">
+              <button class="btn-save" [disabled]="sttSaving()" (click)="saveStt()">
+                @if (sttSaving()) { Saving… } @else { Save }
+              </button>
+
+              <button class="btn-test" [disabled]="sttTestDisabled()" (click)="testSttConnection()">
+                @if (sttValidating()) {
+                  <span class="spinner-xs"></span> Testing…
+                } @else {
+                  Test Connection
+                }
+              </button>
+
+              @if (sttSaved()) {
+                <div class="validation-result valid">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                  Saved
+                </div>
+              }
+
+              @if (sttValidResult(); as result) {
+                <div class="validation-result" [class.valid]="result.valid" [class.invalid]="!result.valid">
+                  @if (result.valid) {
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                    @if (result.error) { {{ result.error }} } @else { Connected — {{ isWhisper() ? 'Whisper is ready' : 'DeepGram is ready' }} }
+                  } @else {
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    {{ result.error ?? 'Failed' }}
+                  }
+                </div>
+              }
+            </div>
+
+            @if (!isWhisper()) {
+              <div class="stt-steps">
+                <p class="stt-steps-title">How to get your free DeepGram key:</p>
+                <ol>
+                  <li>Go to <strong>console.deepgram.com</strong> → Sign up (no credit card)</li>
+                  <li>Click <strong>"Create API Key"</strong> → copy the key</li>
+                  <li>Paste it above → Save → Test Connection</li>
+                </ol>
+              </div>
+            } @else {
+              <div class="stt-steps">
+                <p class="stt-steps-title">Running Whisper locally (WhisperLive):</p>
+                <ol>
+                  <li>Start the server, e.g. <strong>docker run -p 9090:9090 ghcr.io/collabora/whisperlive-cpu:latest</strong> (or the GPU image)</li>
+                  <li>Enter the endpoint above (default <strong>ws://localhost:9090</strong>) and a model name → Save</li>
+                  <li>Test Connection — fully offline, no API key or internet needed.</li>
+                </ol>
+              </div>
+            }
+          </div>
+        </div>
+      </section>
+    }
+
+    <!-- ── Speech Recognition · Segmentation ────────────────────────────────── -->
+    @if (activeNode() === 'stt-segmentation') {
+      <section class="settings-section">
+        <h2 class="section-title">Segmentation &amp; Live Preview</h2>
+        <p class="section-desc">
+          How transcribed text is split into rows and previewed. These apply to
+          both engines, regardless of which one is selected.
+        </p>
+
+        <div class="provider-card">
+          <div class="provider-card-header" style="cursor:default">
+            <div class="provider-card-left">
+              <div class="provider-name-row">
+                <span class="provider-card-name">Segmentation &amp; live preview</span>
+                <span class="free-chip">Both engines</span>
+              </div>
+              <div class="provider-badges">
+                <span class="badge free-badge">Applies to DeepGram &amp; Whisper</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="provider-card-body">
             <div class="field-group">
               <label class="field-label">Trailing-fragment idle wait (ms)</label>
               <input
@@ -466,53 +558,13 @@
                 @if (sttSaving()) { Saving… } @else { Save }
               </button>
 
-              <button class="btn-test" [disabled]="sttTestDisabled()" (click)="testSttConnection()">
-                @if (sttValidating()) {
-                  <span class="spinner-xs"></span> Testing…
-                } @else {
-                  Test Connection
-                }
-              </button>
-
               @if (sttSaved()) {
                 <div class="validation-result valid">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
                   Saved
                 </div>
               }
-
-              @if (sttValidResult(); as result) {
-                <div class="validation-result" [class.valid]="result.valid" [class.invalid]="!result.valid">
-                  @if (result.valid) {
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                    @if (result.error) { {{ result.error }} } @else { Connected — {{ isWhisper() ? 'Whisper is ready' : 'DeepGram is ready' }} }
-                  } @else {
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                    {{ result.error ?? 'Failed' }}
-                  }
-                </div>
-              }
             </div>
-
-            @if (!isWhisper()) {
-              <div class="stt-steps">
-                <p class="stt-steps-title">How to get your free DeepGram key:</p>
-                <ol>
-                  <li>Go to <strong>console.deepgram.com</strong> → Sign up (no credit card)</li>
-                  <li>Click <strong>"Create API Key"</strong> → copy the key</li>
-                  <li>Paste it above → Save → Test Connection</li>
-                </ol>
-              </div>
-            } @else {
-              <div class="stt-steps">
-                <p class="stt-steps-title">Running Whisper locally (WhisperLive):</p>
-                <ol>
-                  <li>Start the server, e.g. <strong>docker run -p 9090:9090 ghcr.io/collabora/whisperlive-cpu:latest</strong> (or the GPU image)</li>
-                  <li>Enter the endpoint above (default <strong>ws://localhost:9090</strong>) and a model name → Save</li>
-                  <li>Test Connection — fully offline, no API key or internet needed.</li>
-                </ol>
-              </div>
-            }
           </div>
         </div>
       </section>

@@ -15,7 +15,8 @@ type SettingsNode =
   | 'general'
   | 'translation-providers'
   | 'translation-prompt'
-  | 'stt'
+  | 'stt-engine'
+  | 'stt-segmentation'
   | 'assist-provider'
   | 'assist-prompt';
 
