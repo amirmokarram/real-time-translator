@@ -494,4 +494,13 @@ export class SettingsComponent implements OnInit {
   protected async toggleInterim(value: boolean): Promise<void> {
     await this.settingsSvc.updateDisplay({ showInterimResults: value });
   }
+
+  // How many past translation rows the live history keeps (newest kept, oldest
+  // dropped — see translation.service.ts). Clamp to a sane range so a stray/blank
+  // input can't persist a value that breaks the history slice.
+  protected async setHistoryLength(value: number): Promise<void> {
+    if (!Number.isFinite(value)) return;
+    const clamped = Math.min(1000, Math.max(1, Math.round(value)));
+    await this.settingsSvc.updateDisplay({ historyLength: clamped });
+  }
 }

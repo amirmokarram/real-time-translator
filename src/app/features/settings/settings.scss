@@ -192,6 +192,13 @@
   accent-color: var(--primary);
 }
 
+// Number inputs in the General section (e.g. History Length) shouldn't stretch to
+// fill the flex row the way the full-width STT field-inputs do.
+.setting-control .field-input {
+  width: 80px;
+  text-align: right;
+}
+
 .range-value {
   font-size: 12px;
   color: var(--text-secondary);
@@ -376,6 +383,19 @@
   }
 
   option { background: var(--surface-elevated); }
+}
+
+// Number inputs (STT latency fields, History Length, …) drop the native spin
+// buttons so every Settings number field reads identically to the text inputs.
+// Scoped to number inputs only — never the select, which keeps its dropdown arrow.
+.field-input[type='number'] {
+  appearance: textfield;
+
+  &::-webkit-inner-spin-button,
+  &::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
 }
 
 .field-textarea {

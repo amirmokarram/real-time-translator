@@ -127,6 +127,21 @@
             </button>
           </div>
         </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <label class="setting-label">History Length</label>
+            <span class="setting-desc">Max translation rows kept in the live history (oldest dropped)</span>
+          </div>
+          <div class="setting-control">
+            <input
+              class="field-input"
+              type="number" min="1" max="1000" step="10"
+              [value]="settingsSvc.settings()?.display?.historyLength ?? 50"
+              (change)="setHistoryLength(+$any($event.target).value)">
+            <span class="range-value">rows</span>
+          </div>
+        </div>
       </section>
     }
 
