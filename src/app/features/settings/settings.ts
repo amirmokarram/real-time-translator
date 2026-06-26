@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { SettingsService } from '../../core/services/settings.service';
 import { ElectronBridgeService } from '../../core/services/electron-bridge.service';
 import { AppSettings, ProviderMeta } from '../../core/models/app.models';
+import { LANGUAGES } from '../../core/models/languages';
 
 interface ProviderFormState {
   fields: Record<string, string>;
@@ -13,6 +14,7 @@ interface ProviderFormState {
 // Leaf nodes of the left-panel settings tree.
 type SettingsNode =
   | 'general'
+  | 'languages'
   | 'translation-providers'
   | 'translation-prompt'
   | 'stt-engine'
@@ -33,6 +35,11 @@ export class SettingsComponent implements OnInit {
 
   protected providerStates = signal<Record<string, ProviderFormState>>({});
   protected activeNode = signal<SettingsNode>('general');
+
+  // ── Languages (translation direction) ─────────────────────────────────────────
+  protected readonly languageList = LANGUAGES;
+  protected languageSource = signal('en');
+  protected languageTarget = signal('fa');
   // Which provider's config is shown in the Translation → Providers panel. Mirrors
   // the active provider — selecting one here also makes it the active provider.
   protected selectedProvider = signal('claude');
@@ -101,6 +108,8 @@ export class SettingsComponent implements OnInit {
 
     this.providerStates.set(states);
     this.selectedProvider.set(this.settingsSvc.activeProvider());
+    this.languageSource.set(settings?.languages.source ?? 'en');
+    this.languageTarget.set(settings?.languages.target ?? 'fa');
     this.sttProvider.set(settings?.stt.provider ?? 'deepgram');
     this.sttApiKey.set(settings?.stt.apiKey ?? '');
     this.sttEndpoint.set(settings?.stt.endpoint || this.whisperDefaults.endpoint);
@@ -125,6 +134,20 @@ export class SettingsComponent implements OnInit {
     );
   }
 
+  // ── Languages (translation direction) ─────────────────────────────────────────
+
+  protected async onSourceLanguageChange(code: string): Promise<void> {
+    this.languageSource.set(code);
+    await this.settingsSvc.updateLanguages({ source: code });
+    // The default translation prompt carries ${SOURCE}/${TARGET} tokens resolved at
+    // call time, so it's language-independent — no need to re-fetch it here.
+  }
+
+  protected async onTargetLanguageChange(code: string): Promise<void> {
+    this.languageTarget.set(code);
+    await this.settingsSvc.updateLanguages({ target: code });
+  }
+
   // ── System prompts ────────────────────────────────────────────────────────────
 
   private flashPromptSaved(which: 'assist' | 'translation'): void {
@@ -143,13 +166,18 @@ export class SettingsComponent implements OnInit {
   }
 
   protected async saveTranslationPrompt(): Promise<void> {
-    await this.settingsSvc.updatePrompts({ translation: this.translationPrompt() });
+    // Store '' (not the rendered text) when the editor still shows the default, so
+    // the language-aware default is resolved live instead of frozen to one language.
+    const value = this.translationPrompt().trim() === this.defaultPrompts.translation.trim()
+      ? ''
+      : this.translationPrompt();
+    await this.settingsSvc.updatePrompts({ translation: value });
     this.flashPromptSaved('translation');
   }
 
   protected resetTranslationPrompt(): void {
     this.translationPrompt.set(this.defaultPrompts.translation);
-    void this.saveTranslationPrompt();
+    void this.saveTranslationPrompt(); // equals the default → persists '' (use live default)
   }
 
   // ── Assist ──────────────────────────────────────────────────────────────────
@@ -412,7 +440,7 @@ export class SettingsComponent implements OnInit {
         try {
           ws.send(JSON.stringify({
             uid: 'rtt-test',
-            language: this.settingsSvc.settings()?.stt.language ?? 'en',
+            language: this.settingsSvc.settings()?.languages.source ?? 'en',
             task: 'transcribe',
             model: this.sttModel().trim() || this.whisperDefaults.model,
             use_vad: this.sttUseVad(),

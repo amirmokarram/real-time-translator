@@ -7,16 +7,16 @@ metadata:
   originSessionId: d1468163-6e3b-4140-8e02-a0b3d8eb0ee3
 ---
 
-Real-time English → Persian desktop translator built with Angular 21 + Electron 42.
+Real-time system-audio desktop translator built with Angular 21 + Electron 42. **Language pair is user-configurable** (Settings → Languages; added 2026-06-26) — defaults to English → Persian, the primary use case.
 
-**Why:** Amir wants to translate system audio (movies, meetings, YouTube) in real-time to Persian (Farsi) while watching/listening.
+**Why:** Amir wants to translate system audio (movies, meetings, YouTube) in real-time while watching/listening — originally English→Persian, now any source→target from a curated catalog.
 
 **Stack:**
 - Angular 21 (standalone components, signals, `@if`/`@for` control flow) — renderer process
 - Electron 42 — desktop shell
-- DeepGram — streaming speech-to-text (WebSocket)
+- DeepGram / Whisper — streaming speech-to-text (the **source** language drives STT)
 - Switchable translation providers — see [[translation-providers]]
-- Persian UI: Vazirmatn font, RTL; dark theme via CSS vars in `src/styles.scss`
+- Configurable languages: curated catalog in `src/app/core/models/languages.ts` (renderer) + `electron/languages.ts` (main); `settings.languages.{source,target}` (ISO-639-1). Per-cell text direction/font driven by each language's `rtl` flag (Vazirmatn for RTL); dark theme via CSS vars in `src/styles.scss`
 
 **Key architectural decisions:**
 - All translation API calls happen in Electron **main process** (API keys never reach renderer)
@@ -38,7 +38,7 @@ Real-time English → Persian desktop translator built with Angular 21 + Electro
 | Subsystem | Renderer | Electron main | Key decision |
 |---|---|---|---|
 | Audio capture | `core/services/audio.service.ts` | `audio-capture.ts` (enumerate screens only) | loopback via `getUserMedia` in renderer; RMS meter |
-| STT | `core/services/transcription.service.ts` | — | DeepGram WS direct from renderer |
+| STT | `core/services/transcription.service.ts` | — | DeepGram/Whisper WS direct from renderer; `start()` reads `settings.languages.source` (the old `stt.language` field was removed) |
 | Translation | `core/services/translation.service.ts` | `ipc-handlers.ts` + `translation/` | API calls in main; events broadcast to all windows |
 | Overlay | `features/overlay/` | `overlay-window.ts` (`OverlayManager`) | separate transparent window at `#/overlay`; subscribes to broadcast events |
 | Export | `core/services/export.service.ts` | `export:save` handler | native save dialog (`dialog.showSaveDialog`) |

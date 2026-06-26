@@ -2,9 +2,13 @@ import { ProviderSettings } from '../settings-store';
 
 export interface TranslationRequest {
   text: string;
-  sourceLang: string;
+  sourceLang: string; // ISO-639-1 code — used by MT providers (mapped per provider)
   targetLang: string;
-  // Custom system prompt for LLM providers (Claude/OpenAI). Empty/undefined →
+  // English display names of the languages, used by LLM providers to build the
+  // default translation prompt. MT providers ignore these.
+  sourceLangName: string;
+  targetLangName: string;
+  // Custom system prompt for LLM providers (Claude/OpenAI/Ollama). Empty/undefined →
   // built-in default. Pure MT providers (Google/DeepL/Microsoft/Libre) ignore it.
   systemPrompt?: string;
 }

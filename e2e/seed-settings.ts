@@ -16,10 +16,10 @@ export function buildSeedSettings(overrides: SeedOverrides = {}): unknown {
       openai: { model: 'gpt-4o-mini' },
       echo: {},
     },
+    languages: { source: 'en', target: 'fa' },
     stt: {
       provider: 'mock',
       apiKey: 'e2e',
-      language: 'en',
       endpoint: 'ws://localhost:9090',
       model: 'small',
       useVad: false,

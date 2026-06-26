@@ -43,7 +43,9 @@ export class OpenAIProvider implements ITranslationProvider {
       messages: [
         {
           role: 'system',
-          content: resolveTranslationPrompt(request.systemPrompt),
+          content: resolveTranslationPrompt(
+            request.systemPrompt, request.sourceLangName, request.targetLangName,
+          ),
         },
         { role: 'user', content: request.text },
       ],
@@ -68,7 +70,7 @@ export class OpenAIProvider implements ITranslationProvider {
 
   async validate(settings: ProviderSettings): Promise<{ valid: boolean; error?: string }> {
     try {
-      await this.translate({ text: 'hello', sourceLang: 'en', targetLang: 'fa' }, settings);
+      await this.translate({ text: 'hello', sourceLang: 'en', targetLang: 'fa', sourceLangName: 'English', targetLangName: 'Persian (Farsi)' }, settings);
       return { valid: true };
     } catch (err: unknown) {
       return { valid: false, error: err instanceof Error ? err.message : String(err) };

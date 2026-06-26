@@ -1,7 +1,7 @@
 import { app } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs/promises';
-import { DEFAULT_OLLAMA_TRANSLATION_PROMPT } from './prompts';
+import { isLegacyDefaultTranslationPrompt } from './prompts';
 
 export interface ProviderSettings {
   apiKey?: string;
@@ -16,10 +16,15 @@ export interface ProviderSettings {
 export interface AppSettings {
   activeProvider: string;
   providers: Record<string, ProviderSettings>;
+  // The translation direction. `source` drives STT and the "from" side; `target`
+  // drives the translation "to" side. Codes are ISO-639-1 (see electron/languages.ts).
+  languages: {
+    source: string;
+    target: string;
+  };
   stt: {
     provider: string;       // 'deepgram' (cloud streaming) | 'whisper' (local streaming)
     apiKey: string;         // DeepGram key; unused by the local Whisper server
-    language: string;
     endpoint: string;       // Whisper only: WhisperLive WebSocket URL (ws://host:port)
     model: string;          // Whisper only: model size/name the server should load
     useVad: boolean;        // Whisper only: let the server gate on voice activity
@@ -65,12 +70,15 @@ const defaults: AppSettings = {
     microsoft: { region: 'eastus' },
     openai: { model: 'gpt-4o-mini' },
     libretranslate: { endpoint: 'http://localhost:5000' },
-    ollama: { model: '', endpoint: 'http://localhost:11434', prompt: DEFAULT_OLLAMA_TRANSLATION_PROMPT },
+    ollama: { model: '', endpoint: 'http://localhost:11434' },
+  },
+  languages: {
+    source: 'en',
+    target: 'fa',
   },
   stt: {
     provider: 'deepgram',
     apiKey: '',
-    language: 'en',
     endpoint: 'ws://localhost:9090',
     model: 'small',
     useVad: true,
@@ -113,6 +121,29 @@ export class SettingsStore {
     } catch {
       this.data = structuredClone(defaults);
     }
+    await this.migratePrompts();
+  }
+
+  // One-time cleanup: earlier versions persisted hardcoded English→Persian default
+  // prompts (the global translation prompt and the auto-seeded Ollama prompt). Now
+  // that the language pair is configurable, those frozen defaults would override the
+  // language-aware ones. Clear any stored prompt that exactly matches a known legacy
+  // default so it falls back to the live default; genuinely custom prompts are kept.
+  private async migratePrompts(): Promise<void> {
+    let changed = false;
+
+    if (isLegacyDefaultTranslationPrompt(this.data.prompts.translation)) {
+      this.data.prompts.translation = '';
+      changed = true;
+    }
+    for (const cfg of Object.values(this.data.providers)) {
+      if (isLegacyDefaultTranslationPrompt(cfg.prompt)) {
+        cfg.prompt = '';
+        changed = true;
+      }
+    }
+
+    if (changed) await this.persist();
   }
 
   get(): AppSettings {

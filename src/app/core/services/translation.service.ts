@@ -41,8 +41,8 @@ export class TranslationService {
 
       const entry: TranslationEntry = {
         id: crypto.randomUUID(),
-        english: englishText,
-        persian: result.translatedText,
+        source: englishText,
+        target: result.translatedText,
         provider: result.provider,
         processingTimeMs: result.processingTimeMs,
         timestamp: new Date(),

@@ -1,6 +1,7 @@
 import * as https from 'https';
 import { ITranslationProvider, ProviderMeta, TranslationRequest, TranslationResult } from '../provider.interface';
 import { ProviderSettings } from '../../settings-store';
+import { toProviderCode } from '../../languages';
 
 export class GoogleProvider implements ITranslationProvider {
   readonly meta: ProviderMeta = {
@@ -27,8 +28,8 @@ export class GoogleProvider implements ITranslationProvider {
 
     const body = JSON.stringify({
       q: request.text,
-      source: 'en',
-      target: 'fa',
+      source: toProviderCode(request.sourceLang, 'google'),
+      target: toProviderCode(request.targetLang, 'google'),
       format: 'text',
     });
 
@@ -50,7 +51,7 @@ export class GoogleProvider implements ITranslationProvider {
 
   async validate(settings: ProviderSettings): Promise<{ valid: boolean; error?: string }> {
     try {
-      await this.translate({ text: 'hello', sourceLang: 'en', targetLang: 'fa' }, settings);
+      await this.translate({ text: 'hello', sourceLang: 'en', targetLang: 'fa', sourceLangName: 'English', targetLangName: 'Persian (Farsi)' }, settings);
       return { valid: true };
     } catch (err: unknown) {
       return { valid: false, error: err instanceof Error ? err.message : String(err) };

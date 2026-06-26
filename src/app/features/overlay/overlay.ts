@@ -1,5 +1,6 @@
 import { Component, inject, signal, OnInit, OnDestroy } from '@angular/core';
 import { ElectronBridgeService } from '../../core/services/electron-bridge.service';
+import { Language, languageByCode } from '../../core/models/languages';
 
 @Component({
   selector: 'app-overlay',
@@ -10,28 +11,38 @@ import { ElectronBridgeService } from '../../core/services/electron-bridge.servi
 export class OverlayComponent implements OnInit, OnDestroy {
   private bridge = inject(ElectronBridgeService);
 
-  protected english = signal('');
-  protected persian = signal('');
+  protected source = signal('');
+  protected target = signal('');
   protected isTranslating = signal(false);
 
   protected clickThrough = signal(false);
   protected fontSize = signal(24);
-  protected showEnglish = signal(true);
+  protected showSource = signal(true);
+
+  // Configured languages — drive the per-line direction/font and the toolbar label.
+  // The overlay only subscribes to translation events, so it reads settings once.
+  protected sourceLang = signal<Language>(languageByCode('en'));
+  protected targetLang = signal<Language>(languageByCode('fa'));
 
   private unsubs: Array<() => void> = [];
 
   ngOnInit(): void {
+    void this.bridge.getSettings().then((s) => {
+      this.sourceLang.set(languageByCode(s.languages.source));
+      this.targetLang.set(languageByCode(s.languages.target));
+    });
+
     this.unsubs.push(
       this.bridge.onTranslationSource((text) => {
-        this.english.set(text);
-        this.persian.set('');
+        this.source.set(text);
+        this.target.set('');
         this.isTranslating.set(true);
       }),
       this.bridge.onTranslationChunk((chunk) => {
-        this.persian.update((s) => s + chunk);
+        this.target.update((s) => s + chunk);
       }),
       this.bridge.onTranslationComplete((text) => {
-        this.persian.set(text);
+        this.target.set(text);
         this.isTranslating.set(false);
       })
     );
@@ -53,8 +64,8 @@ export class OverlayComponent implements OnInit, OnDestroy {
     this.bridge.setOverlayMouseIgnore(next, true);
   }
 
-  protected toggleEnglish(): void {
-    this.showEnglish.update((v) => !v);
+  protected toggleSource(): void {
+    this.showSource.update((v) => !v);
   }
 
   protected biggerFont(): void {

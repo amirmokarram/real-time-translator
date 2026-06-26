@@ -2,6 +2,7 @@ import * as https from 'https';
 import * as http from 'http';
 import { ITranslationProvider, ProviderMeta, TranslationRequest, TranslationResult } from '../provider.interface';
 import { ProviderSettings } from '../../settings-store';
+import { toProviderCode } from '../../languages';
 
 export class LibreTranslateProvider implements ITranslationProvider {
   readonly meta: ProviderMeta = {
@@ -34,8 +35,8 @@ export class LibreTranslateProvider implements ITranslationProvider {
 
     const body = JSON.stringify({
       q: request.text,
-      source: 'en',
-      target: 'fa',
+      source: toProviderCode(request.sourceLang, 'libretranslate'),
+      target: toProviderCode(request.targetLang, 'libretranslate'),
       format: 'text',
       ...(settings.apiKey ? { api_key: settings.apiKey } : {}),
     });
@@ -66,7 +67,7 @@ export class LibreTranslateProvider implements ITranslationProvider {
 
   async validate(settings: ProviderSettings): Promise<{ valid: boolean; error?: string }> {
     try {
-      await this.translate({ text: 'hello', sourceLang: 'en', targetLang: 'fa' }, settings);
+      await this.translate({ text: 'hello', sourceLang: 'en', targetLang: 'fa', sourceLangName: 'English', targetLangName: 'Persian (Farsi)' }, settings);
       return { valid: true };
     } catch (err: unknown) {
       return { valid: false, error: err instanceof Error ? err.message : String(err) };

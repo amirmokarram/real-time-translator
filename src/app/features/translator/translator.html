@@ -3,13 +3,13 @@
   <!-- ── Column headers ─────────────────────────────────────────────────── -->
   <div class="col-headers">
     <div class="col-header">
-      <span class="lang-label"><span class="lang-flag">🇬🇧</span> English</span>
+      <span class="lang-label"><span class="lang-flag">{{ sourceLang.flag }}</span> {{ sourceLang.nativeName }}</span>
       @if (audio.isCapturing() && transcription.isRunning()) {
         <span class="live-badge"><span class="pulse-dot"></span> LIVE</span>
       }
     </div>
     <div class="col-header">
-      <span class="lang-label"><span class="lang-flag">🇮🇷</span> فارسی</span>
+      <span class="lang-label"><span class="lang-flag">{{ targetLang.flag }}</span> {{ targetLang.nativeName }}</span>
       <span class="provider-tag">{{ providerName }}</span>
     </div>
   </div>
@@ -35,13 +35,13 @@
           [class.selected]="isSelected(entry.id)"
           (click)="toggleRow(entry, $event)">
           <div class="hcell hcell-en">
-            <p class="hcell-text">{{ entry.english }}</p>
+            <p class="hcell-text" [class.rtl-text]="sourceLang.rtl" [attr.dir]="sourceLang.rtl ? 'rtl' : 'ltr'">{{ entry.source }}</p>
             <span class="hcell-meta">{{ formatTime(entry.timestamp) }}</span>
             <button
               class="copy-btn"
               [class.copied]="copiedId() === entry.id"
-              (click)="copyEnglish(entry); $event.stopPropagation()"
-              title="Copy English">
+              (click)="copySource(entry); $event.stopPropagation()"
+              [title]="'Copy ' + sourceLang.name">
               @if (copiedId() === entry.id) {
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M20 6L9 17l-5-5"/>
@@ -56,7 +56,7 @@
             </button>
           </div>
           <div class="hcell hcell-fa">
-            <p class="hcell-text persian-text">{{ entry.persian }}</p>
+            <p class="hcell-text target-text" [class.rtl-text]="targetLang.rtl" [attr.dir]="targetLang.rtl ? 'rtl' : 'ltr'">{{ entry.target }}</p>
             <span class="hcell-meta">{{ entry.processingTimeMs }}ms · {{ entry.provider }}</span>
           </div>
         </div>
@@ -114,13 +114,15 @@
   @if (audio.isCapturing()) {
     <div class="live-panel">
       <div class="live-cell live-cell-en">
-        <p class="live-text" [class.interim]="!!transcription.interimText()">
+        <p class="live-text" [class.interim]="!!transcription.interimText()"
+          [class.rtl-text]="sourceLang.rtl" [attr.dir]="sourceLang.rtl ? 'rtl' : 'ltr'">
           {{ liveEnglish || 'Listening…' }}
         </p>
       </div>
       @if (livePartialEnabled) {
         <div class="live-cell live-cell-fa">
-          <p class="live-text persian-text interim">
+          <p class="live-text target-text interim"
+            [class.rtl-text]="targetLang.rtl" [attr.dir]="targetLang.rtl ? 'rtl' : 'ltr'">
             {{ translation.livePersian() || '…' }}
           </p>
         </div>

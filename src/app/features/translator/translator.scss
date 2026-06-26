@@ -163,13 +163,19 @@
   word-break: break-word;
 }
 
-.persian-text {
-  font-family: 'Vazirmatn', Tahoma, sans-serif;
-  direction: rtl;
-  text-align: right;
+// Target-language text styling (color/size) — direction-agnostic. The script
+// direction + font are applied separately via .rtl-text so any language pair works.
+.target-text {
   font-size: 15px;
   line-height: 1.8;
   color: var(--accent);
+}
+
+// Applied to whichever cell's language is right-to-left (source or target).
+.rtl-text {
+  font-family: 'Vazirmatn', Tahoma, sans-serif;
+  direction: rtl;
+  text-align: right;
 }
 
 .hcell-meta {

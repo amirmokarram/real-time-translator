@@ -14,6 +14,16 @@
       </li>
 
       <li>
+        <button class="tree-item tree-leaf-top" [class.active]="activeNode() === 'languages'" (click)="activeNode.set('languages')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/>
+            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+          </svg>
+          Languages
+        </button>
+      </li>
+
+      <li>
         <div class="tree-group-label">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M5 12h14M12 5l7 7-7 7"/>
@@ -115,6 +125,49 @@
               (click)="toggleInterim(!settingsSvc.settings()?.display?.showInterimResults)">
               <span class="toggle-thumb"></span>
             </button>
+          </div>
+        </div>
+      </section>
+    }
+
+    <!-- ── Languages ────────────────────────────────────────────────────────── -->
+    @if (activeNode() === 'languages') {
+      <section class="settings-section">
+        <h2 class="section-title">Languages</h2>
+        <p class="section-desc">
+          Set the translation direction. The <strong>Source</strong> language drives speech
+          recognition and the input side; the <strong>Target</strong> language is what text is
+          translated into. Not every provider supports every language — if a pair isn't
+          supported, that provider will report an error when you translate or test it.
+        </p>
+
+        <div class="provider-card active-provider">
+          <div class="provider-card-body">
+            <div class="field-group">
+              <label class="field-label">Source language (from)</label>
+              <select
+                class="field-select"
+                [ngModel]="languageSource()"
+                (ngModelChange)="onSourceLanguageChange($event)"
+                [ngModelOptions]="{ standalone: true }">
+                @for (lang of languageList; track lang.code) {
+                  <option [value]="lang.code">{{ lang.flag }} {{ lang.nativeName }} ({{ lang.name }})</option>
+                }
+              </select>
+            </div>
+
+            <div class="field-group">
+              <label class="field-label">Target language (to)</label>
+              <select
+                class="field-select"
+                [ngModel]="languageTarget()"
+                (ngModelChange)="onTargetLanguageChange($event)"
+                [ngModelOptions]="{ standalone: true }">
+                @for (lang of languageList; track lang.code) {
+                  <option [value]="lang.code">{{ lang.flag }} {{ lang.nativeName }} ({{ lang.name }})</option>
+                }
+              </select>
+            </div>
           </div>
         </div>
       </section>
@@ -256,6 +309,10 @@
                 [ngModel]="translationPrompt()"
                 (ngModelChange)="translationPrompt.set($event)"
                 [ngModelOptions]="{ standalone: true }"></textarea>
+              <p class="field-hint">
+                Use <code>{{ '${SOURCE}' }}</code> and <code>{{ '${TARGET}' }}</code> as placeholders — they're
+                replaced with your configured languages (Settings → Languages) each time, so the prompt follows the pair.
+              </p>
               <p class="field-hint">
                 Only applies to LLM providers (<strong>Claude</strong>, <strong>OpenAI</strong>).
                 Google, DeepL, Microsoft and LibreTranslate are machine-translation APIs and ignore it.

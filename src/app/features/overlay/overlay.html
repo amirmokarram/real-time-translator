@@ -11,8 +11,9 @@
     </span>
 
     <div class="toolbar-actions">
-      <button class="ov-btn" [class.on]="showEnglish()" (click)="toggleEnglish()" title="Toggle English line">
-        EN
+      <button class="ov-btn" [class.on]="showSource()" (click)="toggleSource()"
+        [title]="'Toggle ' + sourceLang().name + ' line'">
+        {{ sourceLang().code.toUpperCase() }}
       </button>
       <button class="ov-btn" (click)="smallerFont()" title="Smaller text">A−</button>
       <button class="ov-btn" (click)="biggerFont()" title="Bigger text">A+</button>
@@ -36,16 +37,18 @@
 
   <!-- Subtitle content -->
   <div class="overlay-content">
-    @if (!english() && !persian()) {
-      <p class="overlay-idle">در انتظار ترجمه… · Waiting for translation…</p>
+    @if (!source() && !target()) {
+      <p class="overlay-idle">Waiting for translation…</p>
     }
 
-    @if (showEnglish() && english()) {
-      <p class="overlay-en" [style.fontSize.px]="fontSize() * 0.62">{{ english() }}</p>
+    @if (showSource() && source()) {
+      <p class="overlay-en" [class.rtl-text]="sourceLang().rtl" [attr.dir]="sourceLang().rtl ? 'rtl' : 'ltr'"
+        [style.fontSize.px]="fontSize() * 0.62">{{ source() }}</p>
     }
 
-    @if (persian()) {
-      <p class="overlay-fa" [style.fontSize.px]="fontSize()">{{ persian() }}</p>
+    @if (target()) {
+      <p class="overlay-fa" [class.rtl-text]="targetLang().rtl" [attr.dir]="targetLang().rtl ? 'rtl' : 'ltr'"
+        [style.fontSize.px]="fontSize()">{{ target() }}</p>
     } @else if (isTranslating()) {
       <p class="overlay-fa translating" [style.fontSize.px]="fontSize()">…</p>
     }

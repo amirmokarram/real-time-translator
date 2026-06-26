@@ -23,8 +23,12 @@ CI: `.github/workflows/e2e.yml` (ubuntu, `playwright install-deps chromium` + xv
   `window` `'e2e-stt'` CustomEvents. Audio uses Chromium fake-media launch flags + a microphone source.
 - Translation/assist/dialogs run in **main**: `EchoProvider` (`[fa] <text>`, streams chunks) registered
   in `provider-registry.ts` only when `process.env.TRANSLATOR_E2E` is set; export dialog bypass → temp file.
+  The EchoProvider also has a sentinel: input containing `__RESOLVED_PROMPT__` (`E2E_RESOLVED_PROMPT_SENTINEL`)
+  makes it echo the *resolved* system prompt, so a test can assert `${SOURCE}`/`${TARGET}` token substitution.
 - Per-test temp `userData` (`--user-data-dir`) seeded with `settings.json` (`e2e/seed-settings.ts`).
 
 Harness: `e2e/fixtures.ts` (launch/teardown), `e2e/helpers.ts` (`feed`, `say`, `startCapture`, `getOverlayPage`).
 
 Plan (phases A–D) all built 2026-06-25: A=core slice, B=settings+export, C=overlay+assist, D=GitHub Actions CI. **18 tests green locally.** Uncommitted as of session end. CI workflow unverified until pushed. See [[phase-status]], [[project-architecture]].
+
+**Prompt-token + direction coverage (added 2026-06-26):** 4 tests added for the `${SOURCE}`/`${TARGET}` template-token feature and per-cell RTL (see [[translation-providers]]). In `settings.spec.ts`: editor shows the token template; a custom token prompt persists *verbatim* (un-substituted) to `settings.json`. In `translation-pipeline.spec.ts`: source-LTR/target-RTL `dir` attributes on the rendered text `<p>` only; and call-time token substitution via the EchoProvider sentinel (`From ${SOURCE} to ${TARGET}` → `From English to Persian (Farsi)`). **22 passed, 1 skipped (manual) locally.**

@@ -40,7 +40,9 @@ export class ClaudeProvider implements ITranslationProvider {
     const model = settings.model ?? 'claude-sonnet-4-6';
     const start = Date.now();
 
-    const systemPrompt = resolveTranslationPrompt(request.systemPrompt);
+    const systemPrompt = resolveTranslationPrompt(
+      request.systemPrompt, request.sourceLangName, request.targetLangName,
+    );
 
     let fullText = '';
 

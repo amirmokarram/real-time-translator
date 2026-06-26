@@ -1,5 +1,12 @@
 import { ITranslationProvider, ProviderMeta, TranslationRequest, TranslationResult } from '../provider.interface';
 import { ProviderSettings } from '../../settings-store';
+import { resolveTranslationPrompt } from '../../prompts';
+
+// Sentinel input: when the translated text is this, the EchoProvider returns the
+// RESOLVED system prompt instead of the usual echo. Lets an E2E test assert that
+// ${SOURCE}/${TARGET} tokens are substituted with the configured language names at
+// translate time (the real call-time path), without surfacing prompts in the UI.
+export const E2E_RESOLVED_PROMPT_SENTINEL = '__RESOLVED_PROMPT__';
 
 // Deterministic translation provider used ONLY by end-to-end tests. It performs
 // no network call: it prefixes the input so assertions are predictable, and (when
@@ -21,7 +28,11 @@ export class EchoProvider implements ITranslationProvider {
     onChunk?: (chunk: string) => void
   ): Promise<TranslationResult> {
     const start = Date.now();
-    const translatedText = `[fa] ${request.text}`;
+    // E2E hook: echo the resolved prompt (tokens substituted) so a test can verify
+    // call-time ${SOURCE}/${TARGET} substitution; otherwise echo the input.
+    const translatedText = request.text.includes(E2E_RESOLVED_PROMPT_SENTINEL)
+      ? resolveTranslationPrompt(request.systemPrompt, request.sourceLangName, request.targetLangName)
+      : `[fa] ${request.text}`;
 
     if (onChunk) {
       // Emit the words with their trailing space so the joined chunks equal the

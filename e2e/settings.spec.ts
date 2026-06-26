@@ -46,13 +46,37 @@ test('saving a provider API key persists it to settings.json', async ({ page, us
     .toBe('sk-ant-e2e-key');
 });
 
-test('translation System Prompt: Reset to default persists a non-empty prompt', async ({ page, userDataDir }) => {
+test('translation System Prompt: Reset to default persists an empty prompt (use live default)', async ({ page, userDataDir }) => {
   // "System Prompt" appears under both Translation and Assist; the first is Translation's.
   await page.getByRole('button', { name: 'System Prompt' }).first().click();
   await page.getByRole('button', { name: 'Reset to default' }).click();
 
   await expect(page.locator('.validation-result.valid', { hasText: 'Saved' })).toBeVisible();
+  // Reset stores '' so the language-aware default is resolved live (not frozen to one
+  // language); the editor still shows the default text for visibility.
   await expect
-    .poll(async () => ((await readSettings(userDataDir)).prompts?.translation ?? '').length)
-    .toBeGreaterThan(0);
+    .poll(async () => (await readSettings(userDataDir)).prompts?.translation ?? '<unset>')
+    .toBe('');
+});
+
+test('translation System Prompt: editor shows the ${SOURCE}/${TARGET} token template', async ({ page }) => {
+  await page.getByRole('button', { name: 'System Prompt' }).first().click();
+  // The default the editor loads carries the literal tokens (resolved at call time),
+  // so the variable nature is visible and editable rather than frozen to one language.
+  const textarea = page.locator('.prompt-textarea');
+  await expect(textarea).toHaveValue(/\$\{SOURCE\}/);
+  await expect(textarea).toHaveValue(/\$\{TARGET\}/);
+});
+
+test('translation System Prompt: a custom prompt with tokens persists verbatim', async ({ page, userDataDir }) => {
+  await page.getByRole('button', { name: 'System Prompt' }).first().click();
+  await page.locator('.prompt-textarea').fill('From ${SOURCE} to ${TARGET}');
+  await page.getByRole('button', { name: 'Save' }).click();
+
+  await expect(page.locator('.validation-result.valid', { hasText: 'Saved' })).toBeVisible();
+  // Stored with the tokens intact (NOT pre-substituted) so main resolves them live
+  // against the configured language pair on every translate.
+  await expect
+    .poll(async () => (await readSettings(userDataDir)).prompts?.translation ?? '<unset>')
+    .toBe('From ${SOURCE} to ${TARGET}');
 });

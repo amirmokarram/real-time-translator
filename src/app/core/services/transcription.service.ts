@@ -71,10 +71,14 @@ export class TranscriptionService {
     fatal: (message) => { this.error.set(message); this.stop(); },
   };
 
-  async start(stream: MediaStream, lang = 'en-US'): Promise<void> {
+  async start(stream: MediaStream): Promise<void> {
     if (this.isRunning()) return;
 
-    const stt = this.settings.settings()?.stt;
+    const appSettings = this.settings.settings();
+    const stt = appSettings?.stt;
+    // The source language drives speech recognition (ISO-639-1; each backend
+    // narrows it as needed). Falls back to English if settings aren't loaded.
+    const lang = appSettings?.languages.source ?? 'en';
     this.error.set(null);
 
     // Apply latency-tuning knobs for this session.

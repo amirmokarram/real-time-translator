@@ -1,12 +1,15 @@
 import { Injectable, inject } from '@angular/core';
 import { TranslationEntry } from '../models/app.models';
+import { languageByCode } from '../models/languages';
 import { ElectronBridgeService } from './electron-bridge.service';
+import { SettingsService } from './settings.service';
 
 export type ExportFormat = 'txt' | 'srt';
 
 @Injectable({ providedIn: 'root' })
 export class ExportService {
   private bridge = inject(ElectronBridgeService);
+  private settings = inject(SettingsService);
 
   async export(entries: TranslationEntry[], format: ExportFormat): Promise<{ saved: boolean; path?: string }> {
     if (entries.length === 0) return { saved: false };
@@ -19,6 +22,10 @@ export class ExportService {
   // ── TXT transcript ────────────────────────────────────────────────────────────
 
   private toTxt(entries: TranslationEntry[]): string {
+    const langs = this.settings.settings()?.languages;
+    const srcLabel = languageByCode(langs?.source).name;
+    const tgtLabel = languageByCode(langs?.target).name;
+
     const lines: string[] = [
       'Real-Time Translation Transcript',
       `Exported: ${new Date().toLocaleString()}`,
@@ -29,8 +36,8 @@ export class ExportService {
 
     for (const e of entries) {
       lines.push(`[${this.asDate(e.timestamp).toLocaleTimeString()}]  (${e.provider})`);
-      lines.push(`EN: ${e.english}`);
-      lines.push(`FA: ${e.persian}`);
+      lines.push(`${srcLabel}: ${e.source}`);
+      lines.push(`${tgtLabel}: ${e.target}`);
       lines.push('');
     }
 
@@ -53,8 +60,8 @@ export class ExportService {
 
       blocks.push(String(i + 1));
       blocks.push(`${this.srtTime(startMs)} --> ${this.srtTime(endMs)}`);
-      blocks.push(e.english);
-      blocks.push(e.persian);
+      blocks.push(e.source);
+      blocks.push(e.target);
       blocks.push('');
     });
 

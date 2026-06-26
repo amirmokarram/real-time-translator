@@ -2,6 +2,7 @@ import * as https from 'https';
 import * as querystring from 'querystring';
 import { ITranslationProvider, ProviderMeta, TranslationRequest, TranslationResult } from '../provider.interface';
 import { ProviderSettings } from '../../settings-store';
+import { toProviderCode } from '../../languages';
 
 export class DeepLProvider implements ITranslationProvider {
   readonly meta: ProviderMeta = {
@@ -32,8 +33,8 @@ export class DeepLProvider implements ITranslationProvider {
     const body = querystring.stringify({
       auth_key: settings.apiKey,
       text: request.text,
-      source_lang: 'EN',
-      target_lang: 'FA',
+      source_lang: toProviderCode(request.sourceLang, 'deepl'),
+      target_lang: toProviderCode(request.targetLang, 'deepl'),
     });
 
     const raw = await this.post(host, '/v2/translate', body);
@@ -48,7 +49,7 @@ export class DeepLProvider implements ITranslationProvider {
 
   async validate(settings: ProviderSettings): Promise<{ valid: boolean; error?: string }> {
     try {
-      await this.translate({ text: 'hello', sourceLang: 'en', targetLang: 'fa' }, settings);
+      await this.translate({ text: 'hello', sourceLang: 'en', targetLang: 'fa', sourceLangName: 'English', targetLangName: 'Persian (Farsi)' }, settings);
       return { valid: true };
     } catch (err: unknown) {
       return { valid: false, error: err instanceof Error ? err.message : String(err) };

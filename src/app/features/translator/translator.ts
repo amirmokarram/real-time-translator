@@ -10,6 +10,7 @@ import { SettingsService } from '../../core/services/settings.service';
 import { ExportService, ExportFormat } from '../../core/services/export.service';
 import { AssistService } from '../../core/services/assist.service';
 import { TranslationEntry } from '../../core/models/app.models';
+import { Language, languageByCode } from '../../core/models/languages';
 
 @Component({
   selector: 'app-translator',
@@ -145,10 +146,10 @@ export class TranslatorComponent implements OnInit, OnDestroy {
     }
   }
 
-  // Copy a row's English source text — handy mid-meeting when there's no time to retype.
-  protected async copyEnglish(entry: TranslationEntry): Promise<void> {
+  // Copy a row's source text — handy mid-meeting when there's no time to retype.
+  protected async copySource(entry: TranslationEntry): Promise<void> {
     try {
-      await navigator.clipboard.writeText(entry.english);
+      await navigator.clipboard.writeText(entry.source);
       this.copiedId.set(entry.id);
       setTimeout(() => {
         if (this.copiedId() === entry.id) this.copiedId.set(null);
@@ -200,11 +201,11 @@ export class TranslatorComponent implements OnInit, OnDestroy {
   protected askSelected(): void {
     const ids = this.selectedIds();
     if (ids.size === 0) return;
-    // English only — the source of truth; the Persian is just a translation.
+    // Source text only — the source of truth; the target is just a translation.
     const block = this.translation
       .history()
       .filter((e) => ids.has(e.id))
-      .map((e) => e.english)
+      .map((e) => e.source)
       .join('\n');
 
     this.assist.openWith(block);
@@ -257,6 +258,16 @@ export class TranslatorComponent implements OnInit, OnDestroy {
   protected get providerName(): string {
     const id = this.settings.activeProvider();
     return this.settings.providerMeta(id)?.name ?? id;
+  }
+
+  // Configured source/target languages — drive the column headers and per-cell
+  // text direction + font.
+  protected get sourceLang(): Language {
+    return languageByCode(this.settings.settings()?.languages.source);
+  }
+
+  protected get targetLang(): Language {
+    return languageByCode(this.settings.settings()?.languages.target);
   }
 
   protected trackEntry(_: number, e: TranslationEntry): string {

@@ -3,7 +3,7 @@ import * as https from 'https';
 import { URL } from 'url';
 import { ITranslationProvider, ProviderMeta, TranslationRequest, TranslationResult } from '../provider.interface';
 import { ProviderSettings } from '../../settings-store';
-import { resolveTranslationPrompt } from '../../prompts';
+import { resolveOllamaTranslationPrompt } from '../../prompts';
 
 // Offline translation via a local Ollama server (https://ollama.com). No API key —
 // the user runs `ollama serve` and pulls a model (e.g. `ollama pull llama3.2`).
@@ -55,7 +55,9 @@ export class OllamaProvider implements ITranslationProvider {
       model,
       stream: !!onChunk,
       messages: [
-        { role: 'system', content: resolveTranslationPrompt(request.systemPrompt) },
+        { role: 'system', content: resolveOllamaTranslationPrompt(
+          request.systemPrompt, request.sourceLangName, request.targetLangName,
+        ) },
         { role: 'user', content: request.text },
       ],
     });
@@ -69,7 +71,7 @@ export class OllamaProvider implements ITranslationProvider {
 
   async validate(settings: ProviderSettings): Promise<{ valid: boolean; error?: string }> {
     try {
-      await this.translate({ text: 'hello', sourceLang: 'en', targetLang: 'fa' }, settings);
+      await this.translate({ text: 'hello', sourceLang: 'en', targetLang: 'fa', sourceLangName: 'English', targetLangName: 'Persian (Farsi)' }, settings);
       return { valid: true };
     } catch (err: unknown) {
       return { valid: false, error: err instanceof Error ? err.message : String(err) };

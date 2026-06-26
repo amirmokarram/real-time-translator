@@ -121,9 +121,13 @@
   overflow: hidden;
 }
 
-.overlay-fa {
+// Right-to-left lines (source or target) get the RTL font + direction.
+.rtl-text {
   font-family: 'Vazirmatn', Tahoma, sans-serif;
   direction: rtl;
+}
+
+.overlay-fa {
   color: #fff;
   margin: 0;
   line-height: 1.55;

@@ -18,8 +18,9 @@ const mockSettings: AppSettings = {
     openai: { model: 'gpt-4o-mini' },
     libretranslate: { endpoint: 'https://libretranslate.com' },
   },
+  languages: { source: 'en', target: 'fa' },
   stt: {
-    provider: 'deepgram', apiKey: '', language: 'en', endpoint: 'ws://localhost:9090', model: 'small', useVad: true,
+    provider: 'deepgram', apiKey: '', endpoint: 'ws://localhost:9090', model: 'small', useVad: true,
     endpointingMs: 800, utteranceEndMs: 1000, sentenceMaxWaitMs: 4000, commitOnClause: false,
     livePartial: false, partialDebounceMs: 600,
   },

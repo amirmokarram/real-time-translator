@@ -28,8 +28,9 @@ export interface ProviderSettings {
 export interface AppSettings {
   activeProvider: string;
   providers: Record<string, ProviderSettings>;
+  languages: { source: string; target: string };
   stt: {
-    provider: string; apiKey: string; language: string; endpoint: string; model: string; useVad: boolean;
+    provider: string; apiKey: string; endpoint: string; model: string; useVad: boolean;
     // Latency tuning — see settings-store.ts for semantics.
     endpointingMs: number; utteranceEndMs: number; sentenceMaxWaitMs: number; commitOnClause: boolean;
     // Phase B — live partial translation.
@@ -61,8 +62,8 @@ export interface AudioSource {
 
 export interface TranslationEntry {
   id: string;
-  english: string;
-  persian: string;
+  source: string; // source-language text (the recognized/typed input)
+  target: string; // translated target-language text
   provider: string;
   processingTimeMs: number;
   timestamp: Date;

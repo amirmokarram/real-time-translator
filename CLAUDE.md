@@ -1,6 +1,6 @@
 # Real-Time Translator — Project Context
 
-Cross-platform desktop app for **real-time English→Persian (Farsi) translation of system audio** (meetings, videos, calls). The user (Amir) listens to English audio and reads a live Persian translation.
+Cross-platform desktop app for **real-time translation of system audio** (meetings, videos, calls). The user (Amir) listens to audio in one language and reads a live translation in another. The **language pair is user-configurable** (Settings → Languages); it defaults to English→Persian (Farsi) and that remains the primary use case.
 
 > Full detail lives in [`docs/memory/`](docs/memory/). This file is the auto-loaded summary — it travels with the repo, so project context survives a machine/OS change. The canonical copies I auto-read also live in `~/.claude/projects/D--Claude-RealTimeTranslator/memory/`; keep the two in sync (treat `~/.claude` as source of truth I edit, then copy here before committing).
 
@@ -9,7 +9,8 @@ Cross-platform desktop app for **real-time English→Persian (Farsi) translation
 - **Electron 42** — desktop shell
 - 2 switchable streaming STT providers: **DeepGram** (cloud, WebSocket) and **Whisper** (local, WhisperLive WebSocket) — renderer-side `ISttStream` strategy
 - 7 switchable translation providers: Claude, Google, DeepL, Microsoft, OpenAI, LibreTranslate, Ollama (local)
-- Persian UI: Vazirmatn font, RTL, dark theme
+- Configurable source/target languages from a curated catalog (`src/app/core/models/languages.ts` + `electron/languages.ts`); per-cell text direction/font driven by each language's `rtl` flag (Vazirmatn for RTL)
+- Dark theme; Vazirmatn font for Persian/RTL text
 
 ## Architecture (key rules)
 - **Translation & assist API keys + calls stay in the Electron MAIN process** — never move them to Angular services.

@@ -16,10 +16,11 @@ test('exports history as a TXT transcript', async ({ page, exportPath }) => {
   const content = await readFileEventually(exportPath);
   expect(content).toContain('Real-Time Translation Transcript');
   expect(content).toContain('Segments: 2');
-  expect(content).toContain('EN: Hello world.');
-  expect(content).toContain('FA: [fa] Hello world.');
-  expect(content).toContain('EN: Second line.');
-  expect(content).toContain('FA: [fa] Second line.');
+  // TXT labels use the configured language names (seed pair is English → Persian).
+  expect(content).toContain('English: Hello world.');
+  expect(content).toContain('Persian: [fa] Hello world.');
+  expect(content).toContain('English: Second line.');
+  expect(content).toContain('Persian: [fa] Second line.');
 });
 
 test('exports history as SRT subtitles with indices and timecodes', async ({ page, exportPath }) => {

@@ -53,6 +53,14 @@ export class SettingsService {
     await this.bridge.saveSettings({ providers: updated.providers });
   }
 
+  async updateLanguages(partial: Partial<AppSettings['languages']>): Promise<void> {
+    const current = this.settings();
+    if (!current) return;
+    const updated = { ...current, languages: { ...current.languages, ...partial } };
+    this.settings.set(updated);
+    await this.bridge.saveSettings({ languages: updated.languages });
+  }
+
   async updateStt(partial: Partial<AppSettings['stt']>): Promise<void> {
     const current = this.settings();
     if (!current) return;

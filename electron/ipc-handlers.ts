@@ -8,6 +8,7 @@ import { TranslationRequest } from './translation/provider.interface';
 import { AssistRegistry } from './assist/assist-registry';
 import { AssistMessage } from './assist/assist.interface';
 import { DEFAULT_ASSIST_PROMPT, DEFAULT_TRANSLATION_PROMPT } from './prompts';
+import { languageName } from './languages';
 
 const audioCapture = new AudioCapture();
 const registry = new ProviderRegistry();
@@ -71,14 +72,16 @@ export function registerIpcHandlers(
 
     const request: TranslationRequest = {
       text,
-      sourceLang: 'en',
-      targetLang: 'fa',
+      sourceLang: settings.languages.source,
+      targetLang: settings.languages.target,
+      sourceLangName: languageName(settings.languages.source),
+      targetLangName: languageName(settings.languages.target),
       // Per-provider override wins (e.g. a lean prompt for Ollama/TranslateGemma);
       // otherwise fall back to the global translation prompt, then the default.
       systemPrompt: providerSettings.prompt?.trim() || settings.prompts?.translation,
     };
 
-    // Tell all windows what English text we're about to translate
+    // Tell all windows what source text we're about to translate
     broadcast('translation:source', text);
 
     const onChunk = provider.meta.supportsStreaming
@@ -104,8 +107,10 @@ export function registerIpcHandlers(
 
     const request: TranslationRequest = {
       text,
-      sourceLang: 'en',
-      targetLang: 'fa',
+      sourceLang: settings.languages.source,
+      targetLang: settings.languages.target,
+      sourceLangName: languageName(settings.languages.source),
+      targetLangName: languageName(settings.languages.target),
       systemPrompt: providerSettings.prompt?.trim() || settings.prompts?.translation,
     };
 
@@ -167,10 +172,15 @@ export function registerIpcHandlers(
   });
 
   // ── Default system prompts (for the Settings editor + Reset) ─────────────────
-  ipcMain.handle('prompts:get-defaults', () => ({
-    assist: DEFAULT_ASSIST_PROMPT,
-    translation: DEFAULT_TRANSLATION_PROMPT,
-  }));
+  // The translation default carries ${SOURCE}/${TARGET} tokens (resolved to the
+  // configured language names at call time), so it's language-independent and the
+  // editor shows the tokens verbatim.
+  ipcMain.handle('prompts:get-defaults', () => {
+    return {
+      assist: DEFAULT_ASSIST_PROMPT,
+      translation: DEFAULT_TRANSLATION_PROMPT,
+    };
+  });
 
   // ── Export history to file ──────────────────────────────────────────────────
   ipcMain.handle('export:save', async (_event, payload: unknown) => {
