@@ -1,8 +1,10 @@
 # Real-Time Translator
 
-A cross-platform desktop app for **real-time English → Persian (Farsi) translation of system audio** — meetings, videos, calls, and live interviews. It captures your computer's audio, transcribes it with streaming speech-to-text, translates it live, and shows a synced dual-pane (English | فارسی) view. It also includes an **Assist mode**: an LLM helper that explains the conversation and drafts answers you can read aloud.
+A cross-platform desktop app for **real-time translation of system audio** — meetings, videos, calls, and live interviews. It captures your computer's audio, transcribes it with streaming speech-to-text, translates it live, and shows a synced dual-pane view. It also includes an **Assist mode**: an LLM helper that explains the conversation and drafts answers you can read aloud.
 
-Built with Angular 21 + Electron 42. Persian-first UI (Vazirmatn font, RTL, dark theme).
+The **source and target languages are user-configurable** (Settings → Languages) from a curated 20-language catalog; the app defaults to **English → Persian (Farsi)**, which remains the primary use case.
+
+Built with Angular 21 + Electron 42. Dark theme; right-to-left languages (Persian, Arabic, Hebrew, Urdu) render with the Vazirmatn font and correct text direction automatically.
 
 > **License:** All Rights Reserved — this source is public for reference only. See [LICENSE](LICENSE).
 
@@ -11,9 +13,10 @@ Built with Angular 21 + Electron 42. Persian-first UI (Vazirmatn font, RTL, dark
 ## Features
 
 - **System-audio capture** — transcribes what you hear (system loopback) or a selected microphone.
+- **Configurable language pair** — pick source and target languages (Settings → Languages) from a 20-language catalog; defaults to English → Persian. RTL languages get correct direction and font automatically.
 - **2 switchable streaming speech-to-text engines** — [Deepgram](https://deepgram.com) (Nova-2, cloud) or [WhisperLive](https://github.com/collabora/WhisperLive) (Whisper, fully local), with real-time per-sentence segmentation.
 - **7 switchable translation providers** — Claude, Google, DeepL, Microsoft, OpenAI, LibreTranslate, Ollama (local, e.g. TranslateGemma).
-- **Live dual-pane display** — chat-style history with synced English/Persian rows, auto-scroll, per-row copy.
+- **Live dual-pane display** — chat-style history with synced source/translation rows, auto-scroll, per-row copy.
 - **Overlay mode** — a floating, always-on-top, click-through subtitle window for use over other apps.
 - **History export** — save the transcript as `.txt` or `.srt` subtitles.
 - **Assist mode (LLM Q&A)** — select transcript rows and **Ask**, or open a free-form chat:
@@ -83,9 +86,10 @@ npm run electron:dev
 
 Then configure keys in **Settings**:
 
-1. **Speech Recognition** → choose an engine. **Deepgram** (cloud): paste your API key. **Whisper** (local): start a [WhisperLive](https://github.com/collabora/WhisperLive) server (see note below), then set the endpoint (`ws://localhost:9090`) and model. → Test Connection.
-2. **Translation** → pick a provider, add its API key → Test Connection. (Switch the active provider from the header dropdown.)
-3. *(Optional)* **Assist** → choose Claude / OpenAI (reuses that provider's key) or a local server (Ollama / OpenAI-compatible) → Test Connection.
+1. *(Optional)* **Languages** → choose the source and target languages. Defaults to English → Persian. Prompts can reference the active pair via the `${SOURCE}` / `${TARGET}` tokens.
+2. **Speech Recognition** → choose an engine. **Deepgram** (cloud): paste your API key. **Whisper** (local): start a [WhisperLive](https://github.com/collabora/WhisperLive) server (see note below), then set the endpoint (`ws://localhost:9090`) and model. → Test Connection.
+3. **Translation** → pick a provider, add its API key → Test Connection. (Switch the active provider from the header dropdown.)
+4. *(Optional)* **Assist** → choose Claude / OpenAI (reuses that provider's key) or a local server (Ollama / OpenAI-compatible) → Test Connection.
 
 > **WhisperLive note (running the local STT server):**
 > - **CPU:** `docker run -p 9090:9090 ghcr.io/collabora/whisperlive-cpu:latest`
@@ -105,7 +109,7 @@ Then configure keys in **Settings**:
 ## Usage
 
 1. Pick an audio source (System Audio or a microphone) in the bottom bar.
-2. Click **Start Capture** — English transcription and Persian translation stream in live.
+2. Click **Start Capture** — source-language transcription and target-language translation stream in live.
 3. **Overlay**: toggle the floating subtitle window from the header.
 4. **Assist**: select one or more transcript rows and click **Ask**, or use the header **Assist** button for free-form chat.
 5. **Export**: save the session as `.txt` or `.srt` from the export menu.
