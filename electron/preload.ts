@@ -82,14 +82,18 @@ const electronAPI = {
     return () => ipcRenderer.removeListener('translation:source', handler);
   },
 
-  onAssistChunk: (cb: (chunk: string) => void) => {
-    const handler = (_: Electron.IpcRendererEvent, chunk: string) => cb(chunk);
+  // Assist stream events carry { requestId, text } so the renderer can ignore
+  // chunks from a generation it has stopped listening to.
+  onAssistChunk: (cb: (event: { requestId?: string; text: string }) => void) => {
+    const handler = (_: Electron.IpcRendererEvent, event: { requestId?: string; text: string }) =>
+      cb(event);
     ipcRenderer.on('assist:chunk', handler);
     return () => ipcRenderer.removeListener('assist:chunk', handler);
   },
 
-  onAssistComplete: (cb: (text: string) => void) => {
-    const handler = (_: Electron.IpcRendererEvent, text: string) => cb(text);
+  onAssistComplete: (cb: (event: { requestId?: string; text: string }) => void) => {
+    const handler = (_: Electron.IpcRendererEvent, event: { requestId?: string; text: string }) =>
+      cb(event);
     ipcRenderer.on('assist:complete', handler);
     return () => ipcRenderer.removeListener('assist:complete', handler);
   },

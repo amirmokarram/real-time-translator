@@ -226,6 +226,31 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-bottom-left-radius: 3px;
+  // Containing block for the hover copy-answer button
+  position: relative;
+
+  &:hover .msg-copy { opacity: 1; }
+}
+
+// Copy-answer button — top-right of an assistant bubble, revealed on hover.
+.msg-copy {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  background: var(--surface-hover);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s, color 0.12s;
+
+  &:hover { color: var(--text-primary); }
 }
 
 .msg-text {
@@ -408,6 +433,15 @@
 
   &:hover:not(:disabled) { background: var(--primary-hover); }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
+}
+
+// While generating, the send button becomes Stop — keep what streamed so far.
+.assist-stop {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+
+  &:hover { background: var(--surface); border-color: var(--danger, #e5484d); color: var(--danger, #e5484d); }
 }
 
 .spinner-sm {

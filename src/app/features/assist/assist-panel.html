@@ -84,6 +84,18 @@
         <div class="msg" [class.msg-user]="msg.role === 'user'" [class.msg-assistant]="msg.role === 'assistant'">
           @if (msg.role === 'assistant') {
             <div class="msg-text markdown" [innerHTML]="msg.content | markdown"></div>
+            <button
+              class="msg-copy"
+              (click)="copyAnswer(msg.content, $index)"
+              [title]="copiedIdx() === $index ? 'Copied!' : 'Copy answer'">
+              @if (copiedIdx() === $index) {
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              } @else {
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                </svg>
+              }
+            </button>
           } @else {
             <p class="msg-text">{{ msg.content }}</p>
           }
@@ -118,15 +130,20 @@
         [(ngModel)]="question"
         (keydown.enter)="$event.preventDefault(); send()">
       </textarea>
-      <button class="assist-send" [disabled]="assist.isAsking() || !question.trim()" (click)="send()">
-        @if (assist.isAsking()) {
-          <span class="spinner-sm"></span>
-        } @else {
+      @if (assist.isAsking()) {
+        <!-- Stop generating: keeps what has streamed so far as the answer -->
+        <button class="assist-send assist-stop" (click)="assist.stop()" title="Stop generating">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+            <rect x="5" y="5" width="14" height="14" rx="2"/>
+          </svg>
+        </button>
+      } @else {
+        <button class="assist-send" [disabled]="!question.trim()" (click)="send()">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
           </svg>
-        }
-      </button>
+        </button>
+      }
     </div>
   </aside>
 }

@@ -49,7 +49,11 @@ export class AudioService {
 
     this.sources.set(sources);
     if (sources.length > 0 && !this.selectedSource()) {
-      this.selectedSource.set(sources[0]); // System Audio is the default
+      // Restore the last-used source when it still exists (mic device ids can
+      // change across restarts/replugs — then fall back to System Audio).
+      const savedId = (await this.bridge.getSettings()).audio.selectedSourceId;
+      const saved = savedId ? sources.find((s) => s.id === savedId) : undefined;
+      this.selectedSource.set(saved ?? sources[0]); // System Audio is the default
     }
   }
 
@@ -130,6 +134,8 @@ export class AudioService {
   selectSource(source: AudioSource): void {
     if (this.isCapturing()) return;
     this.selectedSource.set(source);
+    // Persist so the pick survives restarts (fire-and-forget; failure is benign).
+    void this.bridge.saveSettings({ audio: { selectedSourceId: source.id } });
   }
 
   // ── Private ──────────────────────────────────────────────────────────────────

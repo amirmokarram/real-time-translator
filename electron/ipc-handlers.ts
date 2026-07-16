@@ -160,10 +160,13 @@ export function registerIpcHandlers(
   // Streamed to the calling window only (not broadcast — the overlay has no chat).
   // Reuses the matching translation provider's API key; model comes from settings.assist.
   ipcMain.handle('assist:ask', async (event, payload: unknown) => {
-    const { messages, context, promptKind } = payload as {
+    const { messages, context, promptKind, requestId } = payload as {
       messages: AssistMessage[];
       context?: string;
       promptKind?: 'assist' | 'interviewAnswer';
+      // Correlates stream events with the ask that spawned them, so a renderer
+      // that "stopped" (detached from) a generation can drop its late chunks.
+      requestId?: string;
     };
     const settings = settingsStore.get();
     const assistCfg = settings.assist;
@@ -171,7 +174,8 @@ export function registerIpcHandlers(
     if (!provider) throw new Error(`Unknown assist provider: ${assistCfg.provider}`);
 
     const apiKey = settings.providers[assistCfg.provider]?.apiKey;
-    const onChunk = (chunk: string) => event.sender.send('assist:chunk', chunk);
+    const onChunk = (chunk: string) =>
+      event.sender.send('assist:chunk', { requestId, text: chunk });
 
     // Prompt resolution stays in MAIN (same as translation): the renderer only
     // names which prompt to use. 'interviewAnswer' = the Question Bank no-match
@@ -186,7 +190,7 @@ export function registerIpcHandlers(
       { apiKey, model: assistCfg.model, endpoint: assistCfg.endpoint },
       onChunk
     );
-    event.sender.send('assist:complete', full);
+    event.sender.send('assist:complete', { requestId, text: full });
     return full;
   });
 

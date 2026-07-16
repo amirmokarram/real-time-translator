@@ -25,6 +25,11 @@ export class AssistService {
   readonly bankMatches = signal<BankMatch[]>([]);
   readonly bankSearching = signal(false);
 
+  // Id of the ask() we're currently listening to. stop() clears it — chunks and
+  // the completion of a stopped generation no longer match and are dropped
+  // (main keeps generating in the background; we just detach).
+  private activeRequestId: string | null = null;
+
   // Open the panel seeded with a transcript block (from selected rows). Opening
   // with new context starts a fresh thread.
   openWith(context: string): void {
@@ -118,23 +123,50 @@ export class AssistService {
     this.streaming.set('');
     this.messages.update((m) => [...m, { role: 'user', content: q }]);
 
-    const unsub = this.bridge.onAssistChunk((chunk) =>
-      this.streaming.update((s) => s + chunk)
-    );
+    const requestId = crypto.randomUUID();
+    this.activeRequestId = requestId;
+
+    // Only append chunks from THIS request while it's still the active one —
+    // a stopped generation keeps streaming from main until it finishes.
+    const unsub = this.bridge.onAssistChunk((event) => {
+      if (event.requestId === requestId && this.activeRequestId === requestId) {
+        this.streaming.update((s) => s + event.text);
+      }
+    });
 
     try {
       const full = await this.bridge.assist({
         messages: this.messages(),
         context: contextOverride ?? this.context() ?? undefined,
         promptKind,
+        requestId,
       });
+      if (this.activeRequestId !== requestId) return; // stopped — partial already committed
       this.messages.update((m) => [...m, { role: 'assistant', content: full }]);
     } catch (err: unknown) {
+      if (this.activeRequestId !== requestId) return;
       this.error.set(err instanceof Error ? err.message : 'Assist request failed');
     } finally {
       unsub();
-      this.streaming.set('');
-      this.isAsking.set(false);
+      if (this.activeRequestId === requestId) {
+        this.activeRequestId = null;
+        this.streaming.set('');
+        this.isAsking.set(false);
+      }
     }
+  }
+
+  // Stop generating: detach from the in-flight request and keep whatever has
+  // streamed so far as the answer. The provider call finishes in the background
+  // (its chunks/completion no longer match activeRequestId and are dropped).
+  stop(): void {
+    if (!this.isAsking()) return;
+    const partial = this.streaming().trimEnd();
+    this.activeRequestId = null;
+    if (partial) {
+      this.messages.update((m) => [...m, { role: 'assistant', content: partial }]);
+    }
+    this.streaming.set('');
+    this.isAsking.set(false);
   }
 }

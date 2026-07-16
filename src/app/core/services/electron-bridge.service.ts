@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import {
   AppSettings,
   AssistMessage,
+  AssistStreamEvent,
   AudioSource,
   BankMatch,
   ElectronAPI,
@@ -104,6 +105,7 @@ export class ElectronBridgeService {
     messages: AssistMessage[];
     context?: string;
     promptKind?: 'assist' | 'interviewAnswer';
+    requestId?: string;
   }): Promise<string> {
     if (this.api) return this.api.assist(payload);
     // Browser mock: echo the last question
@@ -140,11 +142,11 @@ export class ElectronBridgeService {
     return this.api?.bankPickFolder() ?? Promise.resolve({ path: null });
   }
 
-  onAssistChunk(cb: (chunk: string) => void): () => void {
+  onAssistChunk(cb: (event: AssistStreamEvent) => void): () => void {
     return this.api?.onAssistChunk(cb) ?? (() => {});
   }
 
-  onAssistComplete(cb: (text: string) => void): () => void {
+  onAssistComplete(cb: (event: AssistStreamEvent) => void): () => void {
     return this.api?.onAssistComplete(cb) ?? (() => {});
   }
 

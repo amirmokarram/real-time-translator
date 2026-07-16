@@ -12,7 +12,7 @@ Built with Angular 21 + Electron 42. Dark theme; right-to-left languages (Persia
 
 ## Features
 
-- **System-audio capture** — transcribes what you hear (system loopback) or a selected microphone.
+- **System-audio capture** — transcribes what you hear (system loopback) or a selected microphone; your source choice is remembered across restarts.
 - **Configurable language pair** — pick source and target languages (Settings → Languages) from a 20-language catalog; defaults to English → Persian. RTL languages get correct direction and font automatically.
 - **2 switchable streaming speech-to-text engines** — [Deepgram](https://deepgram.com) (Nova-2, cloud) or [WhisperLive](https://github.com/collabora/WhisperLive) (Whisper, fully local), with real-time per-sentence segmentation.
 - **7 switchable translation providers** — Claude, Google, DeepL, Microsoft, OpenAI, LibreTranslate, Ollama (local, e.g. TranslateGemma).
@@ -23,6 +23,7 @@ Built with Angular 21 + Electron 42. Dark theme; right-to-left languages (Persia
   - Tuned by default as an **interview assistant** — explains what's being asked and gives a natural, ready-to-speak answer in simple English.
   - **4 assist providers:** Claude, OpenAI, and two local/offline options — **Ollama** and any **OpenAI-compatible server** (Docker Model Runner, LM Studio, vLLM, llama.cpp, LocalAI).
   - **Markdown rendering** with links opening in your system browser.
+  - **Stop generating** mid-stream (keeps the partial answer) and **copy any answer** with one click.
   - **Fully customizable system prompts** for both assist and translation.
 - **Question Bank** — point the app at a local folder of markdown Q&A files (one prepared answer per file, `# heading` = the question). In the assist panel, **Query From Q Bank** asks the configured LLM which prepared file answers the selected question — plain text-in/text-out routing that works with every assist provider, local ones included. A match opens your own prepared answer; no match generates a fresh interview-ready answer (its prompt is customizable, or read live from a markdown file you point at).
 - **System tray** — closing the window hides the app to the tray while capture and translation keep running (toggle in Settings → General); the tray menu shows/hides the window, starts/stops capture, toggles the overlay, and quits.

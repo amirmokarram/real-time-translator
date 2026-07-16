@@ -22,6 +22,8 @@ export class AssistPanelComponent {
 
   protected question = '';
   protected showContext = signal(false);
+  // Index of the assistant message whose Copy button just fired (for the ✓ flash).
+  protected copiedIdx = signal<number | null>(null);
 
   // "Query From Q Bank" only makes sense once a bank folder is configured.
   protected bankConfigured = computed(() =>
@@ -75,5 +77,18 @@ export class AssistPanelComponent {
 
   protected close(): void {
     this.assist.close();
+  }
+
+  // Copy an answer's raw markdown — ready to paste mid-meeting.
+  protected async copyAnswer(content: string, idx: number): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(content);
+      this.copiedIdx.set(idx);
+      setTimeout(() => {
+        if (this.copiedIdx() === idx) this.copiedIdx.set(null);
+      }, 1500);
+    } catch {
+      this.assist.error.set('Could not copy to clipboard');
+    }
   }
 }

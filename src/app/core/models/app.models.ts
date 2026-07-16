@@ -31,6 +31,13 @@ export interface AssistMessage {
   content: string;
 }
 
+// One streamed assist event. requestId ties it to the ask() that spawned it so
+// a stopped generation's late chunks can be dropped by the renderer.
+export interface AssistStreamEvent {
+  requestId?: string;
+  text: string;
+}
+
 // ── Question Bank ─────────────────────────────────────────────────────────────
 
 // One matching markdown file from the local question bank, chosen by the LLM
@@ -88,6 +95,7 @@ export interface ElectronAPI {
     messages: AssistMessage[];
     context?: string;
     promptKind?: 'assist' | 'interviewAnswer';
+    requestId?: string;
   }): Promise<string>;
   validateAssist(): Promise<{ valid: boolean; error?: string }>;
   getDefaultPrompts(): Promise<{ assist: string; translation: string; interviewAnswer: string }>;
@@ -112,8 +120,8 @@ export interface ElectronAPI {
   onTranslationChunk(cb: (chunk: string) => void): () => void;
   onTranslationComplete(cb: (text: string) => void): () => void;
   onTranslationSource(cb: (text: string) => void): () => void;
-  onAssistChunk(cb: (chunk: string) => void): () => void;
-  onAssistComplete(cb: (text: string) => void): () => void;
+  onAssistChunk(cb: (event: AssistStreamEvent) => void): () => void;
+  onAssistComplete(cb: (event: AssistStreamEvent) => void): () => void;
   onOverlayState(cb: (open: boolean) => void): () => void;
   // Main-process command (tray menu / global hotkey): toggle audio capture.
   onToggleCaptureCommand(cb: () => void): () => void;
