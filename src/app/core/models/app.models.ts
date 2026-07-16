@@ -83,6 +83,8 @@ export interface ElectronAPI {
   maximizeWindow(): void;
   closeWindow(): void;
   isMaximized(): Promise<boolean>;
+  toggleAlwaysOnTop(): Promise<boolean>;
+  isAlwaysOnTop(): Promise<boolean>;
   getSettings(): Promise<AppSettings>;
   saveSettings(settings: Partial<AppSettings>): Promise<void>;
   getAudioSources(): Promise<AudioSource[]>;
@@ -123,6 +125,7 @@ export interface ElectronAPI {
   onAssistChunk(cb: (event: AssistStreamEvent) => void): () => void;
   onAssistComplete(cb: (event: AssistStreamEvent) => void): () => void;
   onOverlayState(cb: (open: boolean) => void): () => void;
+  onAlwaysOnTopState(cb: (on: boolean) => void): () => void;
   // Main-process command (tray menu / global hotkey): toggle audio capture.
   onToggleCaptureCommand(cb: () => void): () => void;
 }

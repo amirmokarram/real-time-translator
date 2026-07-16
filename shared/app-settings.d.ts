@@ -81,6 +81,11 @@ export interface AppSettings {
   tray: {
     closeToTray: boolean;
   };
+  // Main-window behavior. alwaysOnTop keeps the app floating above other
+  // windows (toggled from the header pin, the tray menu, or Settings → General).
+  window: {
+    alwaysOnTop: boolean;
+  };
   // Global hotkeys — Electron accelerator strings (e.g. "Ctrl+Alt+C"), active
   // system-wide even when the app isn't focused. Empty string = disabled.
   hotkeys: {

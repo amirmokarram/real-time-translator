@@ -36,7 +36,24 @@ const overlayManager = new OverlayManager(isDev, (open) => {
   trayManager.refresh();
 });
 
-const trayManager = new TrayManager(() => mainWindow, overlayManager, audioCapture);
+const trayManager = new TrayManager(() => mainWindow, overlayManager, audioCapture, {
+  isAlwaysOnTop: () => settingsStore.get().window.alwaysOnTop,
+  toggleAlwaysOnTop: () => void toggleAlwaysOnTop(),
+});
+
+// Single implementation behind all three controls (header pin, tray checkbox,
+// Settings toggle): flip the persisted flag, apply it to the window, and tell
+// every UI about the new state.
+async function toggleAlwaysOnTop(): Promise<boolean> {
+  const next = !settingsStore.get().window.alwaysOnTop;
+  await settingsStore.update({ window: { alwaysOnTop: next } });
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.setAlwaysOnTop(next);
+    mainWindow.webContents.send('window:always-on-top', next);
+  }
+  trayManager.refresh();
+  return next;
+}
 
 // Global hotkeys reuse the tray's actions; the tray menu (and overlay:state
 // broadcast) keep every window/label in sync no matter which path toggled.
@@ -91,6 +108,10 @@ function createMainWindow(): void {
 
   openLinksExternally(mainWindow.webContents);
 
+  // Restore the persisted always-on-top preference (settings are loaded
+  // before createMainWindow runs).
+  if (settingsStore.get().window.alwaysOnTop) mainWindow.setAlwaysOnTop(true);
+
   // Close-to-tray: X hides the window and the app keeps translating from the
   // tray (Settings → General toggle). A real quit (tray menu / OS shutdown)
   // sets isQuitting via before-quit and passes through.
@@ -138,7 +159,8 @@ app.whenReady().then(async () => {
     overlayManager,
     audioCapture,
     trayManager,
-    hotkeyManager
+    hotkeyManager,
+    toggleAlwaysOnTop
   );
 });
 

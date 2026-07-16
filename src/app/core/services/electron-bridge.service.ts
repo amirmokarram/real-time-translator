@@ -32,6 +32,7 @@ const mockSettings: AppSettings = {
   questionBank: { folderPath: '', maxResults: 3 },
   display: { fontSize: 16, showInterimResults: true, historyLength: 50 },
   tray: { closeToTray: true },
+  window: { alwaysOnTop: false },
   hotkeys: { toggleCapture: 'Ctrl+Alt+C', toggleOverlay: 'Ctrl+Alt+O', showHideWindow: 'Ctrl+Alt+H' },
 };
 
@@ -63,6 +64,18 @@ export class ElectronBridgeService {
 
   closeWindow(): void {
     this.api?.closeWindow();
+  }
+
+  toggleAlwaysOnTop(): Promise<boolean> {
+    return this.api?.toggleAlwaysOnTop() ?? Promise.resolve(false);
+  }
+
+  isAlwaysOnTop(): Promise<boolean> {
+    return this.api?.isAlwaysOnTop() ?? Promise.resolve(false);
+  }
+
+  onAlwaysOnTopState(cb: (on: boolean) => void): () => void {
+    return this.api?.onAlwaysOnTopState(cb) ?? (() => {});
   }
 
   getAudioSources(): Promise<AudioSource[]> {

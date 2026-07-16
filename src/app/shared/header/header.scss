@@ -90,6 +90,11 @@
   }
 }
 
+// Icon-only pin (always-on-top) — same look as the labeled toggles.
+.pin-toggle {
+  padding: 5px 7px;
+}
+
 .overlay-toggle {
   display: flex;
   align-items: center;

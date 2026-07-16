@@ -8,6 +8,8 @@ const electronAPI = {
   maximizeWindow: () => ipcRenderer.invoke('window:maximize'),
   closeWindow: () => ipcRenderer.invoke('window:close'),
   isMaximized: () => ipcRenderer.invoke('window:is-maximized'),
+  toggleAlwaysOnTop: () => ipcRenderer.invoke('window:toggle-always-on-top'),
+  isAlwaysOnTop: () => ipcRenderer.invoke('window:is-always-on-top'),
 
   // Settings
   getSettings: () => ipcRenderer.invoke('settings:get'),
@@ -102,6 +104,13 @@ const electronAPI = {
     const handler = (_: Electron.IpcRendererEvent, open: boolean) => cb(open);
     ipcRenderer.on('overlay:state', handler);
     return () => ipcRenderer.removeListener('overlay:state', handler);
+  },
+
+  // Always-on-top state changes (any of the three controls) → sync the UIs.
+  onAlwaysOnTopState: (cb: (on: boolean) => void) => {
+    const handler = (_: Electron.IpcRendererEvent, on: boolean) => cb(on);
+    ipcRenderer.on('window:always-on-top', handler);
+    return () => ipcRenderer.removeListener('window:always-on-top', handler);
   },
 
   // Tray menu (later also global hotkeys) asking the renderer to start/stop

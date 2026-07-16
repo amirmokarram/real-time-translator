@@ -18,6 +18,28 @@ test('General: toggling Show Interim Results persists to settings.json', async (
     .toBe(false);
 });
 
+test('General: Always on Top toggle applies to the window and persists', async ({ page, userDataDir, electronApp }) => {
+  const toggle = page.locator('.setting-row', { hasText: 'Always on Top' }).locator('.toggle-btn');
+  await expect(toggle).not.toHaveClass(/on/); // default off
+
+  await toggle.click();
+  await expect(toggle).toHaveClass(/on/);
+
+  // Applied to the real BrowserWindow…
+  await expect
+    .poll(() =>
+      electronApp.evaluate(({ BrowserWindow }) =>
+        BrowserWindow.getAllWindows()[0]?.isAlwaysOnTop()
+      )
+    )
+    .toBe(true);
+
+  // …and persisted for the next launch.
+  await expect
+    .poll(async () => (await readSettings(userDataDir)).window?.alwaysOnTop)
+    .toBe(true);
+});
+
 test('switching the active translation provider persists and updates the header', async ({ page, userDataDir }) => {
   await page.getByRole('button', { name: 'Providers' }).click();
 

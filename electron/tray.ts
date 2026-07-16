@@ -18,7 +18,12 @@ export class TrayManager {
     // activate) is always the one we act on.
     private readonly getMainWindow: () => BrowserWindow | null,
     private readonly overlayManager: OverlayManager,
-    private readonly audioCapture: AudioCapture
+    private readonly audioCapture: AudioCapture,
+    // Always-on-top state/toggle — owned by main.ts (persisted in settings).
+    private readonly windowPrefs: {
+      isAlwaysOnTop: () => boolean;
+      toggleAlwaysOnTop: () => void;
+    }
   ) {}
 
   create(): void {
@@ -40,6 +45,12 @@ export class TrayManager {
         {
           label: winVisible ? 'Hide Window' : 'Show Window',
           click: () => this.toggleMainWindow(),
+        },
+        {
+          label: 'Always on Top',
+          type: 'checkbox',
+          checked: this.windowPrefs.isAlwaysOnTop(),
+          click: () => this.windowPrefs.toggleAlwaysOnTop(),
         },
         {
           label: this.audioCapture.isActive() ? 'Stop Capture' : 'Start Capture',

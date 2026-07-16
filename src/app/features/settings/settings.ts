@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal, OnInit, OnDestroy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { SettingsService } from '../../core/services/settings.service';
 import { ElectronBridgeService } from '../../core/services/electron-bridge.service';
@@ -32,7 +32,7 @@ type HotkeyKey = keyof AppSettings['hotkeys'];
   templateUrl: './settings.html',
   styleUrl: './settings.scss',
 })
-export class SettingsComponent implements OnInit {
+export class SettingsComponent implements OnInit, OnDestroy {
   protected settingsSvc = inject(SettingsService);
   protected bridge = inject(ElectronBridgeService);
 
@@ -71,6 +71,11 @@ export class SettingsComponent implements OnInit {
   protected interviewPrompt = signal('');
   private defaultPrompts = { assist: '', translation: '', interviewAnswer: '' };
   protected promptSaved = signal<'assist' | 'translation' | 'interview' | null>(null);
+
+  // Always-on-top mirrors the main-process state (also togglable from the
+  // header pin and the tray menu — the broadcast keeps this row in sync).
+  protected alwaysOnTop = signal(false);
+  private unsubAlwaysOnTop: (() => void) | null = null;
 
   // Global hotkeys — recorded via a focused input capturing the next keydown.
   protected readonly hotkeyActions: { key: HotkeyKey; label: string; desc: string }[] = [
@@ -130,6 +135,8 @@ export class SettingsComponent implements OnInit {
     this.languageSource.set(settings?.languages.source ?? 'en');
     this.languageTarget.set(settings?.languages.target ?? 'fa');
     if (settings?.hotkeys) this.hotkeys.set({ ...settings.hotkeys });
+    this.alwaysOnTop.set(await this.bridge.isAlwaysOnTop());
+    this.unsubAlwaysOnTop = this.bridge.onAlwaysOnTopState((on) => this.alwaysOnTop.set(on));
     this.sttProvider.set(settings?.stt.provider ?? 'deepgram');
     this.sttApiKey.set(settings?.stt.apiKey ?? '');
     this.sttEndpoint.set(settings?.stt.endpoint || this.whisperDefaults.endpoint);
@@ -545,9 +552,18 @@ export class SettingsComponent implements OnInit {
     await this.settingsSvc.updateDisplay({ showInterimResults: value });
   }
 
+  ngOnDestroy(): void {
+    this.unsubAlwaysOnTop?.();
+  }
+
   // Close-to-tray: X hides the app to the system tray instead of quitting.
   protected async setCloseToTray(value: boolean): Promise<void> {
     await this.settingsSvc.updateTray({ closeToTray: value });
+  }
+
+  // Always-on-top: one toggle path through main (persists + applies + broadcasts).
+  protected async toggleAlwaysOnTop(): Promise<void> {
+    this.alwaysOnTop.set(await this.bridge.toggleAlwaysOnTop());
   }
 
   // ── Global hotkeys ────────────────────────────────────────────────────────────

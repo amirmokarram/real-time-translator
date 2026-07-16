@@ -47,7 +47,10 @@ export function registerIpcHandlers(
   // Owned by main.ts — shared with the tray so its menu reflects capture state.
   audioCapture: AudioCapture,
   trayManager: TrayManager,
-  hotkeyManager: HotkeyManager
+  hotkeyManager: HotkeyManager,
+  // Owned by main.ts — flips settings.window.alwaysOnTop, applies it to the
+  // window, refreshes the tray, and broadcasts the new state.
+  toggleAlwaysOnTop: () => Promise<boolean>
 ): void {
   const questionBank = new QuestionBank(settingsStore);
 
@@ -65,6 +68,8 @@ export function registerIpcHandlers(
   });
   ipcMain.handle('window:close', () => win.close());
   ipcMain.handle('window:is-maximized', () => win.isMaximized());
+  ipcMain.handle('window:toggle-always-on-top', () => toggleAlwaysOnTop());
+  ipcMain.handle('window:is-always-on-top', () => settingsStore.get().window.alwaysOnTop);
 
   // ── Settings ────────────────────────────────────────────────────────────────
   ipcMain.handle('settings:get', () => settingsStore.get());
