@@ -6,6 +6,9 @@
 export interface SeedOverrides {
   livePartial?: boolean;
   commitOnClause?: boolean;
+  // Question Bank: point at a fixture folder of markdown Q&A files so the assist
+  // panel's "Query From Q Bank" path is testable. Omitted → no bank configured.
+  questionBank?: { folderPath: string; maxResults?: number };
 }
 
 export function buildSeedSettings(overrides: SeedOverrides = {}): unknown {
@@ -31,6 +34,9 @@ export function buildSeedSettings(overrides: SeedOverrides = {}): unknown {
       partialDebounceMs: 100,
     },
     assist: { provider: 'echo', model: 'echo', endpoint: 'http://localhost:11434' },
+    ...(overrides.questionBank
+      ? { questionBank: { maxResults: 3, ...overrides.questionBank } }
+      : {}),
     prompts: { assist: '', translation: '' },
     audio: { selectedSourceId: null },
     display: { fontSize: 16, showInterimResults: true, historyLength: 50 },
