@@ -99,6 +99,14 @@ const electronAPI = {
     ipcRenderer.on('overlay:state', handler);
     return () => ipcRenderer.removeListener('overlay:state', handler);
   },
+
+  // Tray menu (later also global hotkeys) asking the renderer to start/stop
+  // capture — getUserMedia has to run in the renderer.
+  onToggleCaptureCommand: (cb: () => void) => {
+    const handler = () => cb();
+    ipcRenderer.on('command:toggle-capture', handler);
+    return () => ipcRenderer.removeListener('command:toggle-capture', handler);
+  },
 };
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI);

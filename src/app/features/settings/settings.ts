@@ -526,6 +526,11 @@ export class SettingsComponent implements OnInit {
     await this.settingsSvc.updateDisplay({ showInterimResults: value });
   }
 
+  // Close-to-tray: X hides the app to the system tray instead of quitting.
+  protected async setCloseToTray(value: boolean): Promise<void> {
+    await this.settingsSvc.updateTray({ closeToTray: value });
+  }
+
   // How many past translation rows the live history keeps (newest kept, oldest
   // dropped — see translation.service.ts). Clamp to a sane range so a stray/blank
   // input can't persist a value that breaks the history slice.

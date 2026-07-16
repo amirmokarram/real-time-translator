@@ -3,6 +3,7 @@ import * as fs from 'fs/promises';
 import { SettingsStore } from './settings-store';
 import { AudioCapture } from './audio-capture';
 import { OverlayManager } from './overlay-window';
+import { TrayManager } from './tray';
 import { ProviderRegistry } from './translation/provider-registry';
 import { TranslationRequest } from './translation/provider.interface';
 import { AssistRegistry } from './assist/assist-registry';
@@ -24,7 +25,6 @@ import {
   toMatch,
 } from './question-bank/router';
 
-const audioCapture = new AudioCapture();
 const registry = new ProviderRegistry();
 const assistRegistry = new AssistRegistry();
 
@@ -42,7 +42,10 @@ export function registerIpcHandlers(
   ipcMain: IpcMain,
   win: BrowserWindow,
   settingsStore: SettingsStore,
-  overlayManager: OverlayManager
+  overlayManager: OverlayManager,
+  // Owned by main.ts — shared with the tray so its menu reflects capture state.
+  audioCapture: AudioCapture,
+  trayManager: TrayManager
 ): void {
   const questionBank = new QuestionBank(settingsStore);
 
@@ -71,8 +74,12 @@ export function registerIpcHandlers(
   ipcMain.handle('audio:get-sources', () => audioCapture.getSources());
   ipcMain.handle('audio:start-capture', (_event, sourceId: string) => {
     audioCapture.startCapture(sourceId);
+    trayManager.refresh(); // "Start Capture" → "Stop Capture"
   });
-  ipcMain.handle('audio:stop-capture', () => audioCapture.stopCapture());
+  ipcMain.handle('audio:stop-capture', () => {
+    audioCapture.stopCapture();
+    trayManager.refresh();
+  });
 
   // ── Translation providers metadata ─────────────────────────────────────────
   ipcMain.handle('translation:get-providers', () => registry.getAllMeta());

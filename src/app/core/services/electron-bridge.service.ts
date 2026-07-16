@@ -30,6 +30,7 @@ const mockSettings: AppSettings = {
   audio: { selectedSourceId: null },
   questionBank: { folderPath: '', maxResults: 3 },
   display: { fontSize: 16, showInterimResults: true, historyLength: 50 },
+  tray: { closeToTray: true },
 };
 
 @Injectable({ providedIn: 'root' })
@@ -203,6 +204,10 @@ export class ElectronBridgeService {
 
   onOverlayState(cb: (open: boolean) => void): () => void {
     return this.api?.onOverlayState(cb) ?? (() => {});
+  }
+
+  onToggleCaptureCommand(cb: () => void): () => void {
+    return this.api?.onToggleCaptureCommand(cb) ?? (() => {});
   }
 
   onTranslationSource(cb: (text: string) => void): () => void {

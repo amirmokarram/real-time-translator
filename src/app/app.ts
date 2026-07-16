@@ -3,6 +3,7 @@ import { RouterOutlet } from '@angular/router';
 import { HeaderComponent } from './shared/header/header';
 import { AssistPanelComponent } from './features/assist/assist-panel';
 import { SettingsService } from './core/services/settings.service';
+import { CommandService } from './core/services/command.service';
 
 @Component({
   selector: 'app-root',
@@ -40,6 +41,7 @@ import { SettingsService } from './core/services/settings.service';
 })
 export class App implements OnInit {
   private settings = inject(SettingsService);
+  private commands = inject(CommandService);
 
   // The overlay window loads at #/overlay — render bare, no header/shell
   protected readonly isOverlay =
@@ -50,6 +52,9 @@ export class App implements OnInit {
       // Overlay needs a transparent background; the global body bg is opaque
       document.documentElement.style.background = 'transparent';
       document.body.style.background = 'transparent';
+    } else {
+      // Main window only: listen for tray/hotkey commands from the main process
+      this.commands.init();
     }
     await this.settings.init();
   }

@@ -100,4 +100,12 @@ export class SettingsService {
     this.settings.set(updated);
     await this.bridge.saveSettings({ display: updated.display });
   }
+
+  async updateTray(partial: Partial<AppSettings['tray']>): Promise<void> {
+    const current = this.settings();
+    if (!current) return;
+    const updated = { ...current, tray: { ...current.tray, ...partial } };
+    this.settings.set(updated);
+    await this.bridge.saveSettings({ tray: updated.tray });
+  }
 }

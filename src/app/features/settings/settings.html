@@ -145,6 +145,24 @@
 
         <div class="setting-row">
           <div class="setting-info">
+            <label class="setting-label">Keep Running in Tray</label>
+            <span class="setting-desc">
+              Closing the window hides the app to the system tray — capture and
+              translation keep running. Quit from the tray menu. Off: closing quits.
+            </span>
+          </div>
+          <div class="setting-control">
+            <button
+              class="toggle-btn"
+              [class.on]="settingsSvc.settings()?.tray?.closeToTray"
+              (click)="setCloseToTray(!settingsSvc.settings()?.tray?.closeToTray)">
+              <span class="toggle-thumb"></span>
+            </button>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
             <label class="setting-label">Question Bank Folder</label>
             <span class="setting-desc">
               Local folder of markdown Q&amp;A files. The assist panel's “Query From Q Bank”

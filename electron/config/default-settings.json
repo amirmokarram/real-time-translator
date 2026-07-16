@@ -31,5 +31,6 @@
   "prompts": { "assist": "", "translation": "", "interviewAnswer": "", "interviewAnswerFile": "" },
   "audio": { "selectedSourceId": null },
   "questionBank": { "folderPath": "", "maxResults": 3 },
-  "display": { "fontSize": 16, "showInterimResults": true, "historyLength": 50 }
+  "display": { "fontSize": 16, "showInterimResults": true, "historyLength": 50 },
+  "tray": { "closeToTray": true }
 }

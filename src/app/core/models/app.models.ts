@@ -115,6 +115,8 @@ export interface ElectronAPI {
   onAssistChunk(cb: (chunk: string) => void): () => void;
   onAssistComplete(cb: (text: string) => void): () => void;
   onOverlayState(cb: (open: boolean) => void): () => void;
+  // Main-process command (tray menu / global hotkey): toggle audio capture.
+  onToggleCaptureCommand(cb: () => void): () => void;
 }
 
 declare global {

@@ -25,6 +25,7 @@ Built with Angular 21 + Electron 42. Dark theme; right-to-left languages (Persia
   - **Markdown rendering** with links opening in your system browser.
   - **Fully customizable system prompts** for both assist and translation.
 - **Question Bank** — point the app at a local folder of markdown Q&A files (one prepared answer per file, `# heading` = the question). In the assist panel, **Query From Q Bank** asks the configured LLM which prepared file answers the selected question — plain text-in/text-out routing that works with every assist provider, local ones included. A match opens your own prepared answer; no match generates a fresh interview-ready answer (its prompt is customizable, or read live from a markdown file you point at).
+- **System tray** — closing the window hides the app to the tray while capture and translation keep running (toggle in Settings → General); the tray menu shows/hides the window, starts/stops capture, toggles the overlay, and quits.
 
 ---
 
@@ -117,6 +118,7 @@ Then configure keys in **Settings**:
 4. **Assist**: select one or more transcript rows and click **Ask**, or use the header **Assist** button for free-form chat.
 5. **Question Bank**: with rows selected and a bank folder configured, click **Query From Q Bank** in the assist panel — matching prepared answers appear as cards (click to open); if nothing matches, an interview-ready answer is generated instead.
 6. **Export**: save the session as `.txt` or `.srt` from the export menu.
+7. **Tray**: closing the window keeps the app running in the system tray (translation and overlay stay live) — reopen or quit from the tray menu, or turn this off in Settings → General.
 
 ---
 

@@ -76,4 +76,9 @@ export interface AppSettings {
     showInterimResults: boolean;
     historyLength: number;
   };
+  // System tray behavior. When closeToTray is on, the window X hides the app to
+  // the tray (capture/translation keep running); quit comes from the tray menu.
+  tray: {
+    closeToTray: boolean;
+  };
 }
