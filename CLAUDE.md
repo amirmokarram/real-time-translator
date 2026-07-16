@@ -35,7 +35,7 @@ Cross-platform desktop app for **real-time translation of system audio** (meetin
 - **CSP must include `wss:`** for streaming providers.
 
 ## Status
-Phases 1–4 mostly done: capture → STT → translate → live dual-pane display, **overlay mode**, **history export (TXT/SRT)**. Remaining: system tray + global hotkeys, and packaging the installer. See `docs/memory/phase-status.md`.
+Phases 1–5 done: capture → STT → translate → live dual-pane display, **overlay mode**, **history export (TXT/SRT)**, **assist mode**. **Question Bank** (2026-07-16): assist-panel "Query From Q Bank" — an LLM router picks which prepared markdown Q&A file (local folder, Settings → General) answers the selected question; match → open the file, no match → generated interview-ready answer (prompt: live-read file → Settings editor → built-in default; see `docs/memory/question-bank.md`). Remaining: system tray + global hotkeys. See `docs/memory/phase-status.md`.
 
 ## Working with Amir
 Plan first, then build phase-by-phase (he approves each, then says "next"). He tests each phase and reports precise bugs — trust them, verify the real cause. Commit only when asked. Shell is **PowerShell** (the Bash tool has quoting issues here).
