@@ -78,8 +78,22 @@ its own filesystem directly (see the architecture rule in [[project-architecture
   `BankMatch = { path, title, snippet }`.
 
 ## Deferred / discussed
-- **Phase 2 (not built):** live auto-routing off sentence segmentation — needs a
-  toggle + cost thought now that selection is an LLM call per question.
+- **Phase 2 — live trigger (planned 2026-07-16, presented to Amir, NOT yet
+  approved/built; he queued it next, then system tray + global hotkeys):**
+  hands-free routing while capturing. Design as presented:
+  1. Trigger on committed sentences that **end with `?` and have ≥4 words**
+     (cost control — routing is an LLM call, spend it on real questions only);
+  2. `questionBank.liveSuggest` toggle (default OFF), Settings → General row;
+  3. Concurrency = **latest wins** (one route in flight, newer question replaces
+     stale);
+  4. Results = a compact dismissible **suggestion chip bar above the composer**
+     in the translator (click chip → `bank:open`), NOT auto-opening the assist
+     panel; next question replaces it, stop-capture clears it;
+  5. **No match → silence** (live mode never auto-generates answers; the
+     generate branch stays manual via the panel);
+  6. Main window only, reuses `bank:route` unchanged.
+  Open point: route the question sentence alone (start here) vs. including the
+  previous sentence as setup context (add later if real use shows misses).
 - **In-app progressive disclosure (option B, not built):** replicate the skill's
   domain→reference-file table so the generated answer gets reference-level depth.
 - Embeddings phase became mostly moot once selection went LLM-side.
