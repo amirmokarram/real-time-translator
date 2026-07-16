@@ -81,4 +81,11 @@ export interface AppSettings {
   tray: {
     closeToTray: boolean;
   };
+  // Global hotkeys — Electron accelerator strings (e.g. "Ctrl+Alt+C"), active
+  // system-wide even when the app isn't focused. Empty string = disabled.
+  hotkeys: {
+    toggleCapture: string;
+    toggleOverlay: string;
+    showHideWindow: string;
+  };
 }

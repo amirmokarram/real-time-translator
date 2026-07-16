@@ -602,3 +602,20 @@
     margin: 0;
   }
 }
+
+// ── Hotkeys panel ─────────────────────────────────────────────────────────────
+
+// Recorder field: overrides the narrow right-aligned number-field default.
+.setting-control .hotkey-input {
+  width: 170px;
+  text-align: center;
+  cursor: pointer;
+  caret-color: transparent; // readonly recorder — no text cursor
+  font-weight: 600;
+  letter-spacing: 0.4px;
+
+  &.recording {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+}

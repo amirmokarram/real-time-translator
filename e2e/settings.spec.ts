@@ -68,6 +68,60 @@ test('translation System Prompt: editor shows the ${SOURCE}/${TARGET} token temp
   await expect(textarea).toHaveValue(/\$\{TARGET\}/);
 });
 
+test('Hotkeys: defaults render; recording a new combo persists to settings.json', async ({ page, userDataDir }) => {
+  await page.getByRole('button', { name: 'Hotkeys' }).click();
+
+  // Seeded settings.json has no hotkeys section — the store's deep-merge
+  // supplies the defaults, which the panel should show.
+  const captureInput = page
+    .locator('.setting-row', { hasText: 'Start / Stop Capture' })
+    .locator('.hotkey-input');
+  await expect(captureInput).toHaveValue('Ctrl+Alt+C');
+
+  // Click → recording mode → the next combo (with modifiers) is captured.
+  await captureInput.click();
+  await expect(captureInput).toHaveValue('Press keys…');
+  await page.keyboard.press('Control+Shift+F9');
+  await expect(captureInput).toHaveValue('Ctrl+Shift+F9');
+
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(page.locator('.validation-result.valid', { hasText: 'Saved' })).toBeVisible();
+  await expect
+    .poll(async () => (await readSettings(userDataDir)).hotkeys?.toggleCapture)
+    .toBe('Ctrl+Shift+F9');
+});
+
+test('Hotkeys: Backspace disables a hotkey and persists an empty string', async ({ page, userDataDir }) => {
+  await page.getByRole('button', { name: 'Hotkeys' }).click();
+
+  const overlayInput = page
+    .locator('.setting-row', { hasText: 'Show / Hide Overlay' })
+    .locator('.hotkey-input');
+  await overlayInput.click();
+  await page.keyboard.press('Backspace');
+  await expect(overlayInput).toHaveValue('Disabled');
+
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect
+    .poll(async () => (await readSettings(userDataDir)).hotkeys?.toggleOverlay ?? '<unset>')
+    .toBe('');
+});
+
+test('Hotkeys: two actions sharing a combo blocks Save with a warning', async ({ page }) => {
+  await page.getByRole('button', { name: 'Hotkeys' }).click();
+
+  // Rebind overlay to the capture default → duplicate.
+  const overlayInput = page
+    .locator('.setting-row', { hasText: 'Show / Hide Overlay' })
+    .locator('.hotkey-input');
+  await overlayInput.click();
+  await page.keyboard.press('Control+Alt+C');
+  await expect(overlayInput).toHaveValue('Ctrl+Alt+C');
+
+  await expect(page.locator('.validation-result.invalid', { hasText: 'same combination' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Save' })).toBeDisabled();
+});
+
 test('translation System Prompt: a custom prompt with tokens persists verbatim', async ({ page, userDataDir }) => {
   await page.getByRole('button', { name: 'System Prompt' }).first().click();
   await page.locator('.prompt-textarea').fill('From ${SOURCE} to ${TARGET}');

@@ -4,6 +4,7 @@ import { SettingsStore } from './settings-store';
 import { AudioCapture } from './audio-capture';
 import { OverlayManager } from './overlay-window';
 import { TrayManager } from './tray';
+import { HotkeyManager } from './hotkeys';
 import { ProviderRegistry } from './translation/provider-registry';
 import { TranslationRequest } from './translation/provider.interface';
 import { AssistRegistry } from './assist/assist-registry';
@@ -45,7 +46,8 @@ export function registerIpcHandlers(
   overlayManager: OverlayManager,
   // Owned by main.ts — shared with the tray so its menu reflects capture state.
   audioCapture: AudioCapture,
-  trayManager: TrayManager
+  trayManager: TrayManager,
+  hotkeyManager: HotkeyManager
 ): void {
   const questionBank = new QuestionBank(settingsStore);
 
@@ -68,6 +70,8 @@ export function registerIpcHandlers(
   ipcMain.handle('settings:get', () => settingsStore.get());
   ipcMain.handle('settings:save', async (_event, partial: unknown) => {
     await settingsStore.update(partial as Parameters<typeof settingsStore.update>[0]);
+    // Hotkey edits take effect immediately — no restart needed.
+    hotkeyManager.apply(settingsStore.get().hotkeys);
   });
 
   // ── Audio ─────────────────────────────────────────────────────────────────────

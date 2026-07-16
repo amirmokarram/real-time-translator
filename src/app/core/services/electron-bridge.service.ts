@@ -31,6 +31,7 @@ const mockSettings: AppSettings = {
   questionBank: { folderPath: '', maxResults: 3 },
   display: { fontSize: 16, showInterimResults: true, historyLength: 50 },
   tray: { closeToTray: true },
+  hotkeys: { toggleCapture: 'Ctrl+Alt+C', toggleOverlay: 'Ctrl+Alt+O', showHideWindow: 'Ctrl+Alt+H' },
 };
 
 @Injectable({ providedIn: 'root' })

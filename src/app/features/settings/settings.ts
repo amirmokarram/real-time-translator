@@ -14,6 +14,7 @@ interface ProviderFormState {
 // Leaf nodes of the left-panel settings tree.
 type SettingsNode =
   | 'general'
+  | 'hotkeys'
   | 'languages'
   | 'translation-providers'
   | 'translation-prompt'
@@ -21,6 +22,8 @@ type SettingsNode =
   | 'stt-segmentation'
   | 'assist-provider'
   | 'assist-prompt';
+
+type HotkeyKey = keyof AppSettings['hotkeys'];
 
 @Component({
   selector: 'app-settings',
@@ -69,6 +72,21 @@ export class SettingsComponent implements OnInit {
   private defaultPrompts = { assist: '', translation: '', interviewAnswer: '' };
   protected promptSaved = signal<'assist' | 'translation' | 'interview' | null>(null);
 
+  // Global hotkeys — recorded via a focused input capturing the next keydown.
+  protected readonly hotkeyActions: { key: HotkeyKey; label: string; desc: string }[] = [
+    { key: 'toggleCapture', label: 'Start / Stop Capture', desc: 'Toggle audio capture and live translation' },
+    { key: 'toggleOverlay', label: 'Show / Hide Overlay', desc: 'Toggle the floating subtitle window' },
+    { key: 'showHideWindow', label: 'Show / Hide Window', desc: 'Bring the main window up, or hide it' },
+  ];
+  protected hotkeys = signal<Record<HotkeyKey, string>>({
+    toggleCapture: '',
+    toggleOverlay: '',
+    showHideWindow: '',
+  });
+  protected recordingHotkey = signal<HotkeyKey | null>(null);
+  protected hotkeysSaving = signal(false);
+  protected hotkeysSaved = signal(false);
+
   // STT — DeepGram (cloud streaming) or Whisper (local streaming via WhisperLive)
   protected readonly sttProviderIds = ['deepgram', 'whisper'];
   private readonly whisperDefaults = { endpoint: 'ws://localhost:9090', model: 'small' };
@@ -111,6 +129,7 @@ export class SettingsComponent implements OnInit {
     this.selectedProvider.set(this.settingsSvc.activeProvider());
     this.languageSource.set(settings?.languages.source ?? 'en');
     this.languageTarget.set(settings?.languages.target ?? 'fa');
+    if (settings?.hotkeys) this.hotkeys.set({ ...settings.hotkeys });
     this.sttProvider.set(settings?.stt.provider ?? 'deepgram');
     this.sttApiKey.set(settings?.stt.apiKey ?? '');
     this.sttEndpoint.set(settings?.stt.endpoint || this.whisperDefaults.endpoint);
@@ -529,6 +548,88 @@ export class SettingsComponent implements OnInit {
   // Close-to-tray: X hides the app to the system tray instead of quitting.
   protected async setCloseToTray(value: boolean): Promise<void> {
     await this.settingsSvc.updateTray({ closeToTray: value });
+  }
+
+  // ── Global hotkeys ────────────────────────────────────────────────────────────
+  // Click a field → it records the next key combination as an Electron
+  // accelerator string. Esc cancels, Backspace/Delete clears (= disabled).
+
+  protected startHotkeyRecording(key: HotkeyKey): void {
+    this.recordingHotkey.set(key);
+  }
+
+  protected stopHotkeyRecording(): void {
+    this.recordingHotkey.set(null);
+  }
+
+  protected clearHotkey(key: HotkeyKey): void {
+    this.hotkeys.update((h) => ({ ...h, [key]: '' }));
+  }
+
+  protected onHotkeyKeydown(key: HotkeyKey, event: KeyboardEvent): void {
+    if (this.recordingHotkey() !== key) return;
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (event.key === 'Escape') {
+      this.recordingHotkey.set(null);
+      return;
+    }
+    if (event.key === 'Backspace' || event.key === 'Delete') {
+      this.clearHotkey(key);
+      this.recordingHotkey.set(null);
+      return;
+    }
+
+    const keyName = this.acceleratorKeyName(event);
+    if (!keyName) return; // modifier-only / unsupported key — keep recording
+
+    const mods: string[] = [];
+    if (event.ctrlKey) mods.push('Ctrl');
+    if (event.altKey) mods.push('Alt');
+    if (event.shiftKey) mods.push('Shift');
+    if (event.metaKey) mods.push('Super');
+    // Require a modifier — a bare global key would swallow normal typing everywhere.
+    if (mods.length === 0) return;
+
+    this.hotkeys.update((h) => ({ ...h, [key]: [...mods, keyName].join('+') }));
+    this.recordingHotkey.set(null);
+  }
+
+  // Two actions bound to the same combination — block Save until resolved.
+  protected hotkeyDuplicate(): boolean {
+    const bound = Object.values(this.hotkeys()).filter((v) => v);
+    return new Set(bound).size !== bound.length;
+  }
+
+  protected async saveHotkeys(): Promise<void> {
+    if (this.hotkeyDuplicate()) return;
+    this.hotkeysSaving.set(true);
+    try {
+      // Main re-applies globalShortcut registrations on save — effective immediately.
+      await this.settingsSvc.updateHotkeys({ ...this.hotkeys() });
+      this.hotkeysSaved.set(true);
+      setTimeout(() => this.hotkeysSaved.set(false), 2000);
+    } finally {
+      this.hotkeysSaving.set(false);
+    }
+  }
+
+  // KeyboardEvent → Electron accelerator key name. Uses event.code so the
+  // physical key is captured regardless of Shift/AltGr layer or keyboard layout.
+  private acceleratorKeyName(event: KeyboardEvent): string | null {
+    const code = event.code;
+    if (/^Key[A-Z]$/.test(code)) return code.slice(3);
+    if (/^Digit\d$/.test(code)) return code.slice(5);
+    if (/^F([1-9]|1\d|2[0-4])$/.test(code)) return code;
+    const map: Record<string, string> = {
+      Space: 'Space', Enter: 'Enter', Tab: 'Tab',
+      ArrowUp: 'Up', ArrowDown: 'Down', ArrowLeft: 'Left', ArrowRight: 'Right',
+      Home: 'Home', End: 'End', PageUp: 'PageUp', PageDown: 'PageDown', Insert: 'Insert',
+      Minus: '-', Equal: '=', Comma: ',', Period: '.', Slash: '/', Backslash: '\\',
+      BracketLeft: '[', BracketRight: ']', Semicolon: ';', Quote: "'", Backquote: '`',
+    };
+    return map[code] ?? null;
   }
 
   // How many past translation rows the live history keeps (newest kept, oldest

@@ -14,6 +14,16 @@
       </li>
 
       <li>
+        <button class="tree-item tree-leaf-top" [class.active]="activeNode() === 'hotkeys'" (click)="activeNode.set('hotkeys')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="5" width="20" height="14" rx="2"/>
+            <path d="M6 9h.01M10 9h.01M14 9h.01M18 9h.01M6 13h.01M18 13h.01M9 13h6M8 17h8" stroke-linecap="round"/>
+          </svg>
+          Hotkeys
+        </button>
+      </li>
+
+      <li>
         <button class="tree-item tree-leaf-top" [class.active]="activeNode() === 'languages'" (click)="activeNode.set('languages')">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/>
@@ -200,6 +210,63 @@
             </div>
           </div>
         }
+      </section>
+    }
+
+    <!-- ── Hotkeys ──────────────────────────────────────────────────────────── -->
+    @if (activeNode() === 'hotkeys') {
+      <section class="settings-section">
+        <h2 class="section-title">Global Hotkeys</h2>
+
+        @for (action of hotkeyActions; track action.key) {
+          <div class="setting-row">
+            <div class="setting-info">
+              <label class="setting-label">{{ action.label }}</label>
+              <span class="setting-desc">{{ action.desc }}</span>
+            </div>
+            <div class="setting-control">
+              <input
+                class="field-input hotkey-input"
+                [class.recording]="recordingHotkey() === action.key"
+                readonly
+                [value]="recordingHotkey() === action.key ? 'Press keys…' : (hotkeys()[action.key] || 'Disabled')"
+                (click)="startHotkeyRecording(action.key)"
+                (keydown)="onHotkeyKeydown(action.key, $event)"
+                (blur)="stopHotkeyRecording()">
+              @if (hotkeys()[action.key]) {
+                <button class="field-btn" (click)="clearHotkey(action.key)" title="Disable this hotkey">Clear</button>
+              }
+            </div>
+          </div>
+        }
+
+        <p class="field-hint">
+          Hotkeys work <strong>system-wide</strong>, even when another app is focused.
+          Click a field, then press a combination including <strong>Ctrl</strong>, <strong>Alt</strong> or
+          <strong>Shift</strong>. <strong>Backspace</strong> disables it, <strong>Esc</strong> cancels.
+          A combination already owned by another app is skipped silently — pick a different one
+          if a hotkey doesn't respond.
+        </p>
+
+        <div class="provider-card-actions">
+          <button class="btn-save" [disabled]="hotkeysSaving() || hotkeyDuplicate()" (click)="saveHotkeys()">
+            @if (hotkeysSaving()) { Saving… } @else { Save }
+          </button>
+
+          @if (hotkeysSaved()) {
+            <div class="validation-result valid">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              Saved — active immediately
+            </div>
+          }
+
+          @if (hotkeyDuplicate()) {
+            <div class="validation-result invalid">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              Two actions share the same combination
+            </div>
+          }
+        </div>
       </section>
     }
 

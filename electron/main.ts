@@ -5,6 +5,7 @@ import { SettingsStore } from './settings-store';
 import { OverlayManager } from './overlay-window';
 import { AudioCapture } from './audio-capture';
 import { TrayManager } from './tray';
+import { HotkeyManager } from './hotkeys';
 
 const isDev = process.env['ELECTRON_DEV'] === 'true';
 // E2E runs skip the tray + close-to-tray interception: Playwright must be able
@@ -36,6 +37,14 @@ const overlayManager = new OverlayManager(isDev, (open) => {
 });
 
 const trayManager = new TrayManager(() => mainWindow, overlayManager, audioCapture);
+
+// Global hotkeys reuse the tray's actions; the tray menu (and overlay:state
+// broadcast) keep every window/label in sync no matter which path toggled.
+const hotkeyManager = new HotkeyManager({
+  toggleCapture: () => trayManager.toggleCapture(),
+  toggleOverlay: () => overlayManager.toggle(),
+  showHideWindow: () => trayManager.toggleMainWindow(),
+});
 
 // Route all external (http/https) links to the system browser instead of
 // navigating the app window in-place (which would break the SPA). Covers both
@@ -121,18 +130,24 @@ app.whenReady().then(async () => {
 
   createMainWindow();
   if (!isE2E) trayManager.create();
+  hotkeyManager.apply(settingsStore.get().hotkeys);
   registerIpcHandlers(
     ipcMain,
     mainWindow!,
     settingsStore,
     overlayManager,
     audioCapture,
-    trayManager
+    trayManager,
+    hotkeyManager
   );
 });
 
 app.on('before-quit', () => {
   isQuitting = true;
+});
+
+app.on('will-quit', () => {
+  hotkeyManager.dispose();
 });
 
 app.on('window-all-closed', () => {

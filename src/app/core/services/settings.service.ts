@@ -108,4 +108,12 @@ export class SettingsService {
     this.settings.set(updated);
     await this.bridge.saveSettings({ tray: updated.tray });
   }
+
+  async updateHotkeys(partial: Partial<AppSettings['hotkeys']>): Promise<void> {
+    const current = this.settings();
+    if (!current) return;
+    const updated = { ...current, hotkeys: { ...current.hotkeys, ...partial } };
+    this.settings.set(updated);
+    await this.bridge.saveSettings({ hotkeys: updated.hotkeys });
+  }
 }
