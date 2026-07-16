@@ -65,8 +65,9 @@ export class SettingsComponent implements OnInit {
   // Custom system prompts (empty stored value falls back to these defaults).
   protected assistPrompt = signal('');
   protected translationPrompt = signal('');
-  private defaultPrompts = { assist: '', translation: '' };
-  protected promptSaved = signal<'assist' | 'translation' | null>(null);
+  protected interviewPrompt = signal('');
+  private defaultPrompts = { assist: '', translation: '', interviewAnswer: '' };
+  protected promptSaved = signal<'assist' | 'translation' | 'interview' | null>(null);
 
   // STT — DeepGram (cloud streaming) or Whisper (local streaming via WhisperLive)
   protected readonly sttProviderIds = ['deepgram', 'whisper'];
@@ -132,6 +133,9 @@ export class SettingsComponent implements OnInit {
     this.translationPrompt.set(
       settings?.prompts.translation?.trim() ? settings.prompts.translation : this.defaultPrompts.translation
     );
+    this.interviewPrompt.set(
+      settings?.prompts.interviewAnswer?.trim() ? settings.prompts.interviewAnswer : this.defaultPrompts.interviewAnswer
+    );
   }
 
   // ── Languages (translation direction) ─────────────────────────────────────────
@@ -150,7 +154,7 @@ export class SettingsComponent implements OnInit {
 
   // ── System prompts ────────────────────────────────────────────────────────────
 
-  private flashPromptSaved(which: 'assist' | 'translation'): void {
+  private flashPromptSaved(which: 'assist' | 'translation' | 'interview'): void {
     this.promptSaved.set(which);
     setTimeout(() => { if (this.promptSaved() === which) this.promptSaved.set(null); }, 2000);
   }
@@ -178,6 +182,33 @@ export class SettingsComponent implements OnInit {
   protected resetTranslationPrompt(): void {
     this.translationPrompt.set(this.defaultPrompts.translation);
     void this.saveTranslationPrompt(); // equals the default → persists '' (use live default)
+  }
+
+  // Interview Answer prompt (Question Bank no-match branch). Same storage rule as
+  // the translation prompt: an unedited default persists as '' so future built-in
+  // default improvements flow through automatically.
+  protected async saveInterviewPrompt(): Promise<void> {
+    const value = this.interviewPrompt().trim() === this.defaultPrompts.interviewAnswer.trim()
+      ? ''
+      : this.interviewPrompt();
+    await this.settingsSvc.updatePrompts({ interviewAnswer: value });
+    this.flashPromptSaved('interview');
+  }
+
+  protected resetInterviewPrompt(): void {
+    this.interviewPrompt.set(this.defaultPrompts.interviewAnswer);
+    void this.saveInterviewPrompt(); // equals the default → persists ''
+  }
+
+  // Optional prompt FILE: read live by main on each no-match call, so an external
+  // skill file stays the single source of truth. When set it overrides the editor.
+  protected async pickInterviewPromptFile(): Promise<void> {
+    const { path } = await this.bridge.pickInterviewPromptFile();
+    if (path) await this.settingsSvc.updatePrompts({ interviewAnswerFile: path });
+  }
+
+  protected async clearInterviewPromptFile(): Promise<void> {
+    await this.settingsSvc.updatePrompts({ interviewAnswerFile: '' });
   }
 
   // ── Assist ──────────────────────────────────────────────────────────────────
@@ -502,5 +533,26 @@ export class SettingsComponent implements OnInit {
     if (!Number.isFinite(value)) return;
     const clamped = Math.min(1000, Math.max(1, Math.round(value)));
     await this.settingsSvc.updateDisplay({ historyLength: clamped });
+  }
+
+  // ── Question Bank ─────────────────────────────────────────────────────────────
+
+  // Native folder picker (main process) → persist the chosen path. Cancelling
+  // leaves the current path untouched.
+  protected async pickBankFolder(): Promise<void> {
+    const { path } = await this.bridge.bankPickFolder();
+    if (path) await this.settingsSvc.updateQuestionBank({ folderPath: path });
+  }
+
+  protected async clearBankFolder(): Promise<void> {
+    await this.settingsSvc.updateQuestionBank({ folderPath: '' });
+  }
+
+  // How many matching files "Query From Q Bank" surfaces and injects. Clamp to a
+  // small sane range so the injected context can't balloon.
+  protected async setBankMaxResults(value: number): Promise<void> {
+    if (!Number.isFinite(value)) return;
+    const clamped = Math.min(10, Math.max(1, Math.round(value)));
+    await this.settingsSvc.updateQuestionBank({ maxResults: clamped });
   }
 }

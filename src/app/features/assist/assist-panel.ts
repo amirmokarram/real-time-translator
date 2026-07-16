@@ -1,9 +1,11 @@
 import {
-  Component, inject, signal, effect, untracked,
+  Component, inject, signal, effect, untracked, computed,
   ViewChild, ElementRef,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { AssistService } from '../../core/services/assist.service';
+import { SettingsService } from '../../core/services/settings.service';
+import { ElectronBridgeService } from '../../core/services/electron-bridge.service';
 import { MarkdownPipe } from '../../shared/markdown.pipe';
 
 @Component({
@@ -15,9 +17,16 @@ import { MarkdownPipe } from '../../shared/markdown.pipe';
 })
 export class AssistPanelComponent {
   protected assist = inject(AssistService);
+  private settingsSvc = inject(SettingsService);
+  private bridge = inject(ElectronBridgeService);
 
   protected question = '';
   protected showContext = signal(false);
+
+  // "Query From Q Bank" only makes sense once a bank folder is configured.
+  protected bankConfigured = computed(() =>
+    !!this.settingsSvc.settings()?.questionBank?.folderPath?.trim()
+  );
 
   @ViewChild('thread') thread!: ElementRef<HTMLDivElement>;
 
@@ -53,6 +62,15 @@ export class AssistPanelComponent {
   protected async runQuick(prompt: string): Promise<void> {
     if (this.assist.isAsking()) return;
     await this.assist.ask(prompt);
+  }
+
+  protected async queryFromBank(): Promise<void> {
+    await this.assist.queryFromBank();
+  }
+
+  protected async openBankFile(path: string): Promise<void> {
+    const result = await this.bridge.bankOpen(path);
+    if (!result.opened && result.error) this.assist.error.set(result.error);
   }
 
   protected close(): void {

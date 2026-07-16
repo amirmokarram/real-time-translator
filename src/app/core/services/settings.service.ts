@@ -85,6 +85,14 @@ export class SettingsService {
     await this.bridge.saveSettings({ prompts: updated.prompts });
   }
 
+  async updateQuestionBank(partial: Partial<AppSettings['questionBank']>): Promise<void> {
+    const current = this.settings();
+    if (!current) return;
+    const updated = { ...current, questionBank: { ...current.questionBank, ...partial } };
+    this.settings.set(updated);
+    await this.bridge.saveSettings({ questionBank: updated.questionBank });
+  }
+
   async updateDisplay(display: Partial<AppSettings['display']>): Promise<void> {
     const current = this.settings();
     if (!current) return;

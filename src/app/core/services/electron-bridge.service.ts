@@ -3,6 +3,7 @@ import {
   AppSettings,
   AssistMessage,
   AudioSource,
+  BankMatch,
   ElectronAPI,
   ProviderMeta,
   TranslationResult,
@@ -25,8 +26,9 @@ const mockSettings: AppSettings = {
     livePartial: false, partialDebounceMs: 600,
   },
   assist: { provider: 'claude', model: 'claude-sonnet-4-6', endpoint: 'http://localhost:11434' },
-  prompts: { assist: '', translation: '' },
+  prompts: { assist: '', translation: '', interviewAnswer: '', interviewAnswerFile: '' },
   audio: { selectedSourceId: null },
+  questionBank: { folderPath: '', maxResults: 3 },
   display: { fontSize: 16, showInterimResults: true, historyLength: 50 },
 };
 
@@ -96,7 +98,11 @@ export class ElectronBridgeService {
     });
   }
 
-  assist(payload: { messages: AssistMessage[]; context?: string }): Promise<string> {
+  assist(payload: {
+    messages: AssistMessage[];
+    context?: string;
+    promptKind?: 'assist' | 'interviewAnswer';
+  }): Promise<string> {
     if (this.api) return this.api.assist(payload);
     // Browser mock: echo the last question
     const last = payload.messages[payload.messages.length - 1]?.content ?? '';
@@ -107,8 +113,29 @@ export class ElectronBridgeService {
     return this.api?.validateAssist() ?? Promise.resolve({ valid: true });
   }
 
-  getDefaultPrompts(): Promise<{ assist: string; translation: string }> {
-    return this.api?.getDefaultPrompts() ?? Promise.resolve({ assist: '', translation: '' });
+  getDefaultPrompts(): Promise<{ assist: string; translation: string; interviewAnswer: string }> {
+    return (
+      this.api?.getDefaultPrompts() ??
+      Promise.resolve({ assist: '', translation: '', interviewAnswer: '' })
+    );
+  }
+
+  pickInterviewPromptFile(): Promise<{ path: string | null }> {
+    return this.api?.pickInterviewPromptFile() ?? Promise.resolve({ path: null });
+  }
+
+  // ── Question Bank ────────────────────────────────────────────────────────────
+
+  bankRoute(query: string): Promise<BankMatch[]> {
+    return this.api?.bankRoute(query) ?? Promise.resolve<BankMatch[]>([]);
+  }
+
+  bankOpen(filePath: string): Promise<{ opened: boolean; error?: string }> {
+    return this.api?.bankOpen(filePath) ?? Promise.resolve({ opened: false });
+  }
+
+  bankPickFolder(): Promise<{ path: string | null }> {
+    return this.api?.bankPickFolder() ?? Promise.resolve({ path: null });
   }
 
   onAssistChunk(cb: (chunk: string) => void): () => void {

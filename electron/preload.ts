@@ -28,6 +28,12 @@ const electronAPI = {
   assist: (payload: unknown) => ipcRenderer.invoke('assist:ask', payload),
   validateAssist: () => ipcRenderer.invoke('assist:validate'),
   getDefaultPrompts: () => ipcRenderer.invoke('prompts:get-defaults'),
+  pickInterviewPromptFile: () => ipcRenderer.invoke('prompts:pick-interview-file'),
+
+  // Question Bank
+  bankRoute: (query: string) => ipcRenderer.invoke('bank:route', query),
+  bankOpen: (filePath: string) => ipcRenderer.invoke('bank:open', filePath),
+  bankPickFolder: () => ipcRenderer.invoke('bank:pick-folder'),
 
   // Export
   exportFile: (payload: unknown) => ipcRenderer.invoke('export:save', payload),

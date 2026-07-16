@@ -3,6 +3,9 @@
 // back to the defaults here. Lives in the MAIN process — the only place prompts
 // are actually used when calling providers.
 
+import * as fsp from 'fs/promises';
+import type { AppSettings } from '../shared/app-settings';
+
 // Template tokens users can place in a translation prompt. They are substituted
 // with the configured source/target language names at call time (applyLanguageTokens),
 // so a custom prompt follows the language pair instead of freezing to one language.
@@ -57,6 +60,67 @@ Exceptions:
 - If the user explicitly asks for only one part (e.g. "just explain", "don't answer yet", or "only the answer"),
   give just that section.
 - For an unrelated general/follow-up question, answer normally in simple, human English (no fixed sections).`;
+
+// Question Bank "no match" answer prompt: when the LLM router finds no prepared
+// answer in the bank, the app generates a fresh interview-ready one with this. The
+// default below is a distillation of Amir's senior-engineer-interview-prep +
+// amir-mokarram-profile Claude Code skills; like the other prompts it's editable in
+// Settings (prompts.interviewAnswer, empty → this default), so the full skill text
+// or any other wording can be pasted in instead.
+export const DEFAULT_INTERVIEW_ANSWER_PROMPT =
+  `You are helping Amir Mokarram answer a question in a live technical interview.
+Amir is a senior/staff software engineer with 18+ years across C#/.NET, ASP.NET Core,
+EF Core, Angular/TypeScript, AWS and Azure, SQL Server, microservices and clean
+architecture, messaging (Kafka), DevOps/CI-CD, security, and AI/LLM integration.
+He is a maker who owns solutions end to end — he built the BigBang low-code platform
+from scratch and the client-side architecture of an AI assistant inside Autodesk Revit.
+
+From the interviewer's question in the transcript, write an answer Amir can say out
+loud, in the first person, as a confident senior engineer.
+
+Rules:
+- Natural spoken English, sayable word for word. Short, direct sentences, B1-level
+  grammar. No metaphors (never "pillars", "backbone", "foundation").
+- Precise technical terminology always — name things correctly (DbContext,
+  idempotency, N+1, polymorphism, CancellationToken), never vague paraphrases.
+- No meta-commentary about interviews or interviewers.
+- Stay strictly within the boundary of the question asked.
+- Give trade-offs for design/architecture questions; Big O and a real use case for
+  algorithms.
+
+Format in Markdown:
+### ⚡ Quick Answer
+2–3 spoken sentences — the fast version.
+### ✅ Interview-Ready Answer
+A short bulleted list, one idea per bullet, each a full spoken sentence covering the
+what, why, and key aspects. Bold important technical terms. Every sentence must add
+technical value.
+
+For behavioural ("tell me about a time") questions, use STAR instead (Situation,
+Task, Action, Result) in the first person, and never invent specifics — use
+bracketed placeholders like "[the platform]" when details are missing.`;
+
+// Resolve the effective Interview Answer prompt for one call, in priority order:
+//   1. prompts.interviewAnswerFile — a markdown file read LIVE right now, so an
+//      external skill file (edited in Claude or anywhere) is the single source of
+//      truth with no copy to drift. Unreadable/empty file → fall through.
+//   2. prompts.interviewAnswer — the custom text saved in the Settings editor.
+//   3. The built-in default above.
+export async function resolveInterviewAnswerPrompt(
+  prompts: AppSettings['prompts'] | undefined
+): Promise<string> {
+  const file = prompts?.interviewAnswerFile?.trim();
+  if (file) {
+    try {
+      const text = (await fsp.readFile(file, 'utf-8')).trim();
+      if (text) return text;
+    } catch {
+      // File missing/unreadable → degrade to the stored prompt rather than failing
+      // a live-interview call over a config problem.
+    }
+  }
+  return prompts?.interviewAnswer?.trim() || DEFAULT_INTERVIEW_ANSWER_PROMPT;
+}
 
 // Lean prompt for dedicated/translation-tuned local models (e.g. TranslateGemma).
 // Such models are trained for translation and behave WORSE when over-instructed

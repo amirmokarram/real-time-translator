@@ -152,6 +152,60 @@
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 }
 
+// The Question-bank action stands slightly apart from the generic quick actions.
+.quick-btn-bank {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+// ── Question-bank matches ─────────────────────────────────────────────────────
+
+.assist-bank {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.bank-hint {
+  margin: 0 0 2px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.bank-card {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 7px 10px;
+  text-align: start;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-elevated);
+  cursor: pointer;
+  transition: border-color 0.12s;
+
+  &:hover { border-color: var(--primary); }
+}
+
+.bank-card-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.bank-card-snippet {
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 // ── Messages ────────────────────────────────────────────────────────────────
 
 .msg {

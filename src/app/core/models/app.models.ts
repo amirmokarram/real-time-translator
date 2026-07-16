@@ -31,6 +31,17 @@ export interface AssistMessage {
   content: string;
 }
 
+// ── Question Bank ─────────────────────────────────────────────────────────────
+
+// One matching markdown file from the local question bank, chosen by the LLM
+// router. `snippet` is a short topic line for the card; the user opens the file to
+// read the full prepared answer.
+export interface BankMatch {
+  path: string;
+  title: string;
+  snippet: string;
+}
+
 // ── Audio ─────────────────────────────────────────────────────────────────────
 
 export interface AudioSource {
@@ -73,9 +84,18 @@ export interface ElectronAPI {
   translate(payload: { text: string; providerId: string }): Promise<TranslationResult>;
   // Live partial preview — same provider, but not broadcast and not streamed.
   translatePartial(payload: { text: string; providerId: string }): Promise<TranslationResult>;
-  assist(payload: { messages: AssistMessage[]; context?: string }): Promise<string>;
+  assist(payload: {
+    messages: AssistMessage[];
+    context?: string;
+    promptKind?: 'assist' | 'interviewAnswer';
+  }): Promise<string>;
   validateAssist(): Promise<{ valid: boolean; error?: string }>;
-  getDefaultPrompts(): Promise<{ assist: string; translation: string }>;
+  getDefaultPrompts(): Promise<{ assist: string; translation: string; interviewAnswer: string }>;
+  pickInterviewPromptFile(): Promise<{ path: string | null }>;
+  // Question Bank
+  bankRoute(query: string): Promise<BankMatch[]>;
+  bankOpen(filePath: string): Promise<{ opened: boolean; error?: string }>;
+  bankPickFolder(): Promise<{ path: string | null }>;
   validateProvider(payload: { providerId: string }): Promise<{ valid: boolean; error?: string }>;
   getAvailableProviders(): Promise<ProviderMeta[]>;
   // Export

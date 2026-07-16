@@ -28,7 +28,8 @@
     "model": "claude-sonnet-4-6",
     "endpoint": "http://localhost:11434"
   },
-  "prompts": { "assist": "", "translation": "" },
+  "prompts": { "assist": "", "translation": "", "interviewAnswer": "", "interviewAnswerFile": "" },
   "audio": { "selectedSourceId": null },
+  "questionBank": { "folderPath": "", "maxResults": 3 },
   "display": { "fontSize": 16, "showInterimResults": true, "historyLength": 50 }
 }

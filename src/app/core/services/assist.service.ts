@@ -1,6 +1,13 @@
 import { Injectable, inject, signal } from '@angular/core';
-import { AssistMessage } from '../models/app.models';
+import { AssistMessage, BankMatch } from '../models/app.models';
 import { ElectronBridgeService } from './electron-bridge.service';
+
+// The user turn for the Question Bank no-match branch. The system prompt for this
+// branch is NOT defined here: it's resolved in the MAIN process from
+// settings.prompts.interviewAnswer (editable in Settings, empty → the built-in
+// default in electron/prompts.ts) — the renderer only names the prompt kind.
+const INTERVIEW_ANSWER_INSTRUCTION =
+  'Answer the interviewer’s question shown in the transcript, ready for me to say out loud.';
 
 // Drives the assist (LLM Q&A) slide-in panel. Holds one chat thread plus the
 // optional transcript context the user selected when they opened it.
@@ -14,6 +21,9 @@ export class AssistService {
   readonly streaming = signal('');     // assistant reply being streamed
   readonly isAsking = signal(false);
   readonly error = signal<string | null>(null);
+  // Files surfaced by the last "Query From Q Bank" run, shown as clickable cards.
+  readonly bankMatches = signal<BankMatch[]>([]);
+  readonly bankSearching = signal(false);
 
   // Open the panel seeded with a transcript block (from selected rows). Opening
   // with new context starts a fresh thread.
@@ -22,6 +32,7 @@ export class AssistService {
     this.messages.set([]);
     this.streaming.set('');
     this.error.set(null);
+    this.bankMatches.set([]);
     this.isOpen.set(true);
   }
 
@@ -31,6 +42,7 @@ export class AssistService {
     this.messages.set([]);
     this.streaming.set('');
     this.error.set(null);
+    this.bankMatches.set([]);
     this.isOpen.set(true);
   }
 
@@ -46,9 +58,58 @@ export class AssistService {
     this.messages.set([]);
     this.streaming.set('');
     this.error.set(null);
+    this.bankMatches.set([]);
   }
 
-  async ask(question: string): Promise<void> {
+  // Ask the LLM router which prepared answer fits the selected interviewer question.
+  //  • Match found → show the file card(s); Amir opens and reads his own answer.
+  //  • No match    → generate a fresh interview-ready answer via the distilled prompt.
+  async queryFromBank(): Promise<void> {
+    if (this.isAsking() || this.bankSearching()) return;
+    const query = (this.context() ?? this.lastUserQuestion() ?? '').trim();
+    if (!query) {
+      this.error.set('Select some transcript rows first, then Query From Q Bank.');
+      return;
+    }
+
+    this.error.set(null);
+    this.bankMatches.set([]);
+    this.bankSearching.set(true);
+    let matches: BankMatch[];
+    try {
+      matches = await this.bridge.bankRoute(query);
+    } catch (err: unknown) {
+      this.error.set(err instanceof Error ? err.message : 'Question bank lookup failed');
+      return;
+    } finally {
+      this.bankSearching.set(false);
+    }
+
+    if (matches.length > 0) {
+      // A prepared answer exists — surface it and stop. Amir opens the file himself.
+      this.bankMatches.set(matches);
+      const label = matches.length === 1 ? 'a prepared answer' : `${matches.length} prepared answers`;
+      this.messages.update((m) => [
+        ...m,
+        { role: 'assistant', content: `Found ${label} for this question — open below to read.` },
+      ]);
+      return;
+    }
+
+    // Nothing prepared → generate an interview-ready answer in Amir's voice.
+    await this.ask(INTERVIEW_ANSWER_INSTRUCTION, undefined, 'interviewAnswer');
+  }
+
+  private lastUserQuestion(): string | null {
+    const users = this.messages().filter((m) => m.role === 'user');
+    return users.length ? users[users.length - 1].content : null;
+  }
+
+  async ask(
+    question: string,
+    contextOverride?: string,
+    promptKind?: 'assist' | 'interviewAnswer'
+  ): Promise<void> {
     const q = question.trim();
     if (!q || this.isAsking()) return;
 
@@ -64,7 +125,8 @@ export class AssistService {
     try {
       const full = await this.bridge.assist({
         messages: this.messages(),
-        context: this.context() ?? undefined,
+        context: contextOverride ?? this.context() ?? undefined,
+        promptKind,
       });
       this.messages.update((m) => [...m, { role: 'assistant', content: full }]);
     } catch (err: unknown) {

@@ -142,6 +142,46 @@
             <span class="range-value">rows</span>
           </div>
         </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <label class="setting-label">Question Bank Folder</label>
+            <span class="setting-desc">
+              Local folder of markdown Q&amp;A files. The assist panel's “Query From Q Bank”
+              action asks the LLM which prepared file answers the question — or generates an
+              interview-ready answer when none fits.
+            </span>
+          </div>
+          <div class="setting-control">
+            <button class="field-btn" (click)="pickBankFolder()">Browse…</button>
+            @if (settingsSvc.settings()?.questionBank?.folderPath) {
+              <button class="field-btn" (click)="clearBankFolder()" title="Clear folder">Clear</button>
+            }
+          </div>
+        </div>
+
+        @if (settingsSvc.settings()?.questionBank?.folderPath; as bankPath) {
+          <div class="setting-row">
+            <div class="setting-info">
+              <span class="setting-desc bank-path">{{ bankPath }}</span>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <label class="setting-label">Suggestions</label>
+              <span class="setting-desc">Max prepared files the LLM may suggest for one question</span>
+            </div>
+            <div class="setting-control">
+              <input
+                class="field-input"
+                type="number" min="1" max="10" step="1"
+                [value]="settingsSvc.settings()?.questionBank?.maxResults ?? 3"
+                (change)="setBankMaxResults(+$any($event.target).value)">
+              <span class="range-value">files</span>
+            </div>
+          </div>
+        }
       </section>
     }
 
@@ -807,6 +847,54 @@
               <button class="btn-save" (click)="saveAssistPrompt()">Save</button>
               <button class="btn-test" (click)="resetAssistPrompt()">Reset to default</button>
               @if (promptSaved() === 'assist') {
+                <div class="validation-result valid">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                  Saved
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+
+        <div class="provider-card">
+          <div class="provider-card-body">
+            <div class="field-group">
+              <label class="field-label">Interview Answer prompt file (optional)</label>
+              <div class="prompt-file-row">
+                <button class="field-btn" (click)="pickInterviewPromptFile()">Browse…</button>
+                @if (settingsSvc.settings()?.prompts?.interviewAnswerFile; as promptFile) {
+                  <button class="field-btn" (click)="clearInterviewPromptFile()">Clear</button>
+                }
+              </div>
+              @if (settingsSvc.settings()?.prompts?.interviewAnswerFile; as promptFile) {
+                <p class="field-hint bank-path">{{ promptFile }}</p>
+              }
+              <p class="field-hint">
+                If set, this markdown file is read <strong>live on every call</strong> and used as the
+                system prompt — point it at a file inside your Claude skill folder so edits there apply
+                here instantly, with no copy to drift. While set, it overrides the editor below.
+              </p>
+            </div>
+
+            <div class="field-group">
+              <label class="field-label">Interview Answer prompt (Question Bank)</label>
+              <textarea
+                class="field-input prompt-textarea"
+                rows="10"
+                spellcheck="false"
+                [ngModel]="interviewPrompt()"
+                (ngModelChange)="interviewPrompt.set($event)"
+                [ngModelOptions]="{ standalone: true }"></textarea>
+              <p class="field-hint">
+                Used by “Query From Q Bank” when no prepared file matches: the app generates a fresh
+                interview-ready answer with these instructions. The selected transcript is appended
+                below this automatically. Paste your own coaching prompt here to replace the default.
+              </p>
+            </div>
+            <div class="provider-card-actions">
+              <button class="btn-save" (click)="saveInterviewPrompt()">Save</button>
+              <button class="btn-test" (click)="resetInterviewPrompt()">Reset to default</button>
+              @if (promptSaved() === 'interview') {
                 <div class="validation-result valid">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
                   Saved

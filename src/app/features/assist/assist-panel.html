@@ -38,6 +38,21 @@
       </div>
     }
 
+    <!-- ── Question-bank matches ──────────────────────────────────────────── -->
+    @if (assist.bankMatches().length > 0) {
+      <div class="assist-bank">
+        <p class="bank-hint">From your question bank:</p>
+        @for (m of assist.bankMatches(); track m.path) {
+          <button class="bank-card" (click)="openBankFile(m.path)" title="Open file">
+            <span class="bank-card-title">{{ m.title }}</span>
+            @if (m.snippet) {
+              <span class="bank-card-snippet">{{ m.snippet }}</span>
+            }
+          </button>
+        }
+      </div>
+    }
+
     <!-- ── Thread ─────────────────────────────────────────────────────────── -->
     <div class="assist-thread" #thread>
       @if (assist.messages().length === 0 && !assist.streaming()) {
@@ -48,6 +63,14 @@
               @for (qa of quickActions; track qa.label) {
                 <button class="quick-btn" [disabled]="assist.isAsking()" (click)="runQuick(qa.prompt)">
                   {{ qa.label }}
+                </button>
+              }
+              @if (bankConfigured()) {
+                <button
+                  class="quick-btn quick-btn-bank"
+                  [disabled]="assist.isAsking() || assist.bankSearching()"
+                  (click)="queryFromBank()">
+                  @if (assist.bankSearching()) { Searching… } @else { Query From Q Bank }
                 </button>
               }
             </div>

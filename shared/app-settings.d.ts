@@ -51,12 +51,25 @@ export interface AppSettings {
     endpoint: string;
   };
   // Custom system prompts. Empty string → use the built-in default (see prompts.ts).
+  // interviewAnswer drives the Question Bank "no match" branch: generating a fresh
+  // interview-ready answer when no prepared file fits. interviewAnswerFile, when
+  // set, points at a markdown file read LIVE on each call and used as that prompt —
+  // so an external skill file stays the single source of truth (no copy to drift).
   prompts: {
     assist: string;
     translation: string;
+    interviewAnswer: string;
+    interviewAnswerFile: string;
   };
   audio: {
     selectedSourceId: string | null;
+  };
+  // Question Bank — a local folder of markdown Q&A files. The assist panel's
+  // "Query From Q Bank" action searches it, surfaces matching files, and folds
+  // their content into the assist context to ground first-person answers.
+  questionBank: {
+    folderPath: string; // absolute path to the bank folder; '' = not configured
+    maxResults: number; // how many matching files to surface / inject (top-N)
   };
   display: {
     fontSize: number;
