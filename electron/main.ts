@@ -6,6 +6,16 @@ import { OverlayManager } from './overlay-window';
 
 const isDev = process.env['ELECTRON_DEV'] === 'true';
 
+// Dev hot-reload relaunches Electron while the previous instance is still
+// releasing its disk cache, so every boot logs noisy (but harmless)
+// "Unable to move the cache: Access is denied" / "Gpu Cache Creation failed"
+// errors. The HTTP and GPU shader disk caches buy nothing in dev — keep them
+// off so the console stays clean. Packaged builds are unaffected.
+if (isDev) {
+  app.commandLine.appendSwitch('disable-http-cache');
+  app.commandLine.appendSwitch('disable-gpu-shader-disk-cache');
+}
+
 let mainWindow: BrowserWindow | null = null;
 const settingsStore = new SettingsStore();
 
