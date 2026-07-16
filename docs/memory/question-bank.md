@@ -7,7 +7,7 @@ metadata:
   originSessionId: 804b9845-9292-466a-bc2b-b724035aa687
 ---
 
-# Question Bank (built 2026-07-16, Amir confirmed good; NOT yet committed)
+# Question Bank (built 2026-07-16, Amir confirmed good; committed as 2da3737)
 
 **What it is:** Amir keeps a local folder of markdown interview Q&A files (descriptive
 filenames, `# heading` = the question, body = his prepared answer, English, ~50–200
@@ -77,23 +77,27 @@ its own filesystem directly (see the architecture rule in [[project-architecture
   `ask(question, contextOverride?, promptKind?)`), assist-panel cards + button,
   `BankMatch = { path, title, snippet }`.
 
+## E2E coverage (added 2026-07-16)
+`e2e/question-bank.spec.ts` covers the panel path: match → card, no-match → generated
+answer, button hidden without a folder. Deterministic via the **echo-digit routing
+trick** (digit in the question = manifest number; no digit = NONE) against
+`e2e/bank-fixtures/` — see [[e2e-testing]] for the mechanism.
+
 ## Deferred / discussed
-- **Phase 2 — live trigger (planned 2026-07-16, presented to Amir, NOT yet
-  approved/built; he queued it next, then system tray + global hotkeys):**
-  hands-free routing while capturing. Design as presented:
-  1. Trigger on committed sentences that **end with `?` and have ≥4 words**
-     (cost control — routing is an LLM call, spend it on real questions only);
-  2. `questionBank.liveSuggest` toggle (default OFF), Settings → General row;
-  3. Concurrency = **latest wins** (one route in flight, newer question replaces
-     stale);
-  4. Results = a compact dismissible **suggestion chip bar above the composer**
-     in the translator (click chip → `bank:open`), NOT auto-opening the assist
-     panel; next question replaces it, stop-capture clears it;
-  5. **No match → silence** (live mode never auto-generates answers; the
-     generate branch stays manual via the panel);
-  6. Main window only, reuses `bank:route` unchanged.
-  Open point: route the question sentence alone (start here) vs. including the
-  previous sentence as setup context (add later if real use shows misses).
+- **Phase 2 — live trigger: BUILT 2026-07-16, then REMOVED same day at Amir's
+  request. Do NOT re-propose.** Full implementation existed and was verified
+  working end-to-end (E2E suite + a scripted run of the real app with his real
+  bank/Claude config routed a typed question to the right file). Amir still
+  rejected it after hands-on testing: *"live question bank query is not useful
+  and not accurate, accuracy is important for me."* The auto-trigger
+  (`?` + ≥4 words on committed/typed sentences) fires on the wrong things and a
+  single spoken sentence lacks the context he curates by hand — selection IS the
+  accuracy step, so routing must stay manual. All Phase 2 code was reverted
+  (settings `liveSuggest`, BankSuggestService, chip bar, the live e2e spec —
+  the bank fixtures were later reused by the Phase 1 panel spec);
+  the **manual panel "Query From Q Bank" remains the only routing path**.
+  If hands-free ever comes back, it needs a fundamentally more accurate trigger
+  (not sentence-shape heuristics), not a rebuild of this design.
 - **In-app progressive disclosure (option B, not built):** replicate the skill's
   domain→reference-file table so the generated answer gets reference-level depth.
 - Embeddings phase became mostly moot once selection went LLM-side.

@@ -32,3 +32,16 @@ Harness: `e2e/fixtures.ts` (launch/teardown), `e2e/helpers.ts` (`feed`, `say`, `
 Plan (phases A–D) all built 2026-06-25: A=core slice, B=settings+export, C=overlay+assist, D=GitHub Actions CI. **18 tests green locally.** Uncommitted as of session end. CI workflow unverified until pushed. See [[phase-status]], [[project-architecture]].
 
 **Prompt-token + direction coverage (added 2026-06-26):** 4 tests added for the `${SOURCE}`/`${TARGET}` template-token feature and per-cell RTL (see [[translation-providers]]). In `settings.spec.ts`: editor shows the token template; a custom token prompt persists *verbatim* (un-substituted) to `settings.json`. In `translation-pipeline.spec.ts`: source-LTR/target-RTL `dir` attributes on the rendered text `<p>` only; and call-time token substitution via the EchoProvider sentinel (`From ${SOURCE} to ${TARGET}` → `From English to Persian`). **22 passed, 1 skipped (manual) locally.**
+
+**Question Bank panel coverage (added 2026-07-16):** `e2e/question-bank.spec.ts` — 3 tests
+for the assist panel's manual "Query From Q Bank" path (see [[question-bank]]): match →
+`.bank-card` with the right title + "Found a prepared answer" message; digit-free question →
+no-match branch streams a generated interview answer; no bank folder → `.quick-btn-bank`
+hidden. **The echo-digit routing trick makes the LLM router deterministic:** EchoAssistProvider
+echoes `routerUserMessage(q)` back, so a digit in the question parses as that manifest number
+(fixture files in `e2e/bank-fixtures/` index alphabetically 1=closures, 2=DI, 3=event-loop),
+and a digit-free question echoes the prompt's own "NONE" → `parseSelection` → []. Seed gained
+`questionBank.folderPath` override (`seed-settings.ts`). **25 passed, 1 skipped locally.**
+Still uncovered by e2e (deliberate seams or just not written): real STT/translation/assist
+providers, language-pair switching UI, latency knobs, history length, assist prompt editors,
+`bank:open` card click (would launch the OS file handler).
