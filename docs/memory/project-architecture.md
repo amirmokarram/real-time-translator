@@ -7,9 +7,9 @@ metadata:
   originSessionId: d1468163-6e3b-4140-8e02-a0b3d8eb0ee3
 ---
 
-Real-time system-audio desktop translator built with Angular 21 + Electron 42. **Language pair is user-configurable** (Settings → Languages; added 2026-06-26) — defaults to English → Persian, the primary use case.
+Real-time system-audio desktop translator built with Angular 21 + Electron 42. **Language pair is fully user-configurable** (Settings → Languages; added 2026-06-26) — any supported source→target pair from a curated catalog (no fixed English→Persian framing as of 2026-07-17).
 
-**Why:** Amir wants to translate system audio (movies, meetings, YouTube) in real-time while watching/listening — originally English→Persian, now any source→target from a curated catalog.
+**Why:** Amir wants to translate system audio (movies, meetings, YouTube) in real-time while watching/listening — originally built around English→Persian, now positioned as any source→target from a curated catalog.
 
 **Stack:**
 - Angular 21 (standalone components, signals, `@if`/`@for` control flow) — renderer process

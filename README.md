@@ -2,7 +2,7 @@
 
 A cross-platform desktop app for **real-time translation of system audio** — meetings, videos, calls, and live interviews. It captures your computer's audio, transcribes it with streaming speech-to-text, translates it live, and shows a synced dual-pane view. It also includes an **Assist mode**: an LLM helper that explains the conversation and drafts answers you can read aloud.
 
-The **source and target languages are user-configurable** (Settings → Languages) from a curated 20-language catalog; the app defaults to **English → Persian (Farsi)**, which remains the primary use case.
+The **source and target languages are fully user-configurable** (Settings → Languages) — translate between any supported pair from a curated 20-language catalog.
 
 Built with Angular 21 + Electron 42. Dark theme; right-to-left languages (Persian, Arabic, Hebrew, Urdu) render with the Vazirmatn font and correct text direction automatically.
 
@@ -13,7 +13,7 @@ Built with Angular 21 + Electron 42. Dark theme; right-to-left languages (Persia
 ## Features
 
 - **System-audio capture** — transcribes what you hear (system loopback) or a selected microphone; your source choice is remembered across restarts.
-- **Configurable language pair** — pick source and target languages (Settings → Languages) from a 20-language catalog; defaults to English → Persian. RTL languages get correct direction and font automatically.
+- **Any-to-any language pair** — pick source and target languages (Settings → Languages) from a 20-language catalog; translate between any supported pair. RTL languages get correct direction and font automatically.
 - **2 switchable streaming speech-to-text engines** — [Deepgram](https://deepgram.com) (Nova-2, cloud) or [WhisperLive](https://github.com/collabora/WhisperLive) (Whisper, fully local), with real-time per-sentence segmentation.
 - **7 switchable translation providers** — Claude, Google, DeepL, Microsoft, OpenAI, LibreTranslate, Ollama (local, e.g. TranslateGemma).
 - **Live dual-pane display** — chat-style history with synced source/translation rows, auto-scroll, per-row copy.
@@ -92,7 +92,7 @@ npm run electron:dev
 
 Then configure keys in **Settings**:
 
-1. *(Optional)* **Languages** → choose the source and target languages. Defaults to English → Persian. Prompts can reference the active pair via the `${SOURCE}` / `${TARGET}` tokens.
+1. *(Optional)* **Languages** → choose the source and target languages from the catalog. Prompts can reference the active pair via the `${SOURCE}` / `${TARGET}` tokens.
 2. **Speech Recognition** → choose an engine. **Deepgram** (cloud): paste your API key. **Whisper** (local): start a [WhisperLive](https://github.com/collabora/WhisperLive) server (see note below), then set the endpoint (`ws://localhost:9090`) and model. → Test Connection.
 3. **Translation** → pick a provider, add its API key → Test Connection. (Switch the active provider from the header dropdown.)
 4. *(Optional)* **Assist** → choose Claude / OpenAI (reuses that provider's key) or a local server (Ollama / OpenAI-compatible) → Test Connection.

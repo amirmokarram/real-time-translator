@@ -1,6 +1,6 @@
 # Real-Time Translator — Project Context
 
-Cross-platform desktop app for **real-time translation of system audio** (meetings, videos, calls). The user (Amir) listens to audio in one language and reads a live translation in another. The **language pair is user-configurable** (Settings → Languages); it defaults to English→Persian (Farsi) and that remains the primary use case.
+Cross-platform desktop app for **real-time translation of system audio** (meetings, videos, calls). The user (Amir) listens to audio in one language and reads a live translation in another. The **language pair is fully user-configurable** (Settings → Languages) — any supported source→target pair from a curated catalog.
 
 > Full detail lives in [`docs/memory/`](docs/memory/). This file is the auto-loaded summary — it travels with the repo, so project context survives a machine/OS change. The canonical copies I auto-read also live in `~/.claude/projects/D--Claude-RealTimeTranslator/memory/`; keep the two in sync (treat `~/.claude` as source of truth I edit, then copy here before committing).
 

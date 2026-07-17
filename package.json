@@ -1,6 +1,7 @@
 {
   "name": "claude-real-time-translator",
   "version": "1.2.0",
+  "description": "Read a live translation of whatever you're listening to, in any language. Cross-platform desktop app for real-time system-audio translation.",
   "author": "Amir Mokarram",
   "license": "UNLICENSED",
   "main": "dist-electron/main.js",
