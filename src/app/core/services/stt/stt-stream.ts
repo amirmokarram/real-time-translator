@@ -6,8 +6,9 @@ export interface SttStartOptions {
   language: string;   // BCP-47-ish, e.g. 'en-US'; each backend narrows as needed
   apiKey?: string;    // DeepGram
   endpoint?: string;  // Whisper — WhisperLive WebSocket URL
-  model?: string;     // Whisper — model name/size the server should load
+  model?: string;     // model name: Whisper size/name, or DeepGram model ('nova-3'/'nova-2')
   useVad?: boolean;   // Whisper — server-side voice-activity gating
+  keyterms?: string[]; // custom vocabulary to bias recognition (names, jargon, acronyms)
   endpointingMs?: number;  // DeepGram — silence (ms) before a fragment is finalized
   utteranceEndMs?: number; // DeepGram — end-of-utterance backstop (ms); API floor is 1000
 }

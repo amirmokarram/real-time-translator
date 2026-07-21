@@ -99,7 +99,9 @@ export class SettingsComponent implements OnInit, OnDestroy {
   protected sttApiKey = signal('');
   protected sttEndpoint = signal('ws://localhost:9090');
   protected sttModel = signal('small');
+  protected sttDeepgramModel = signal('nova-3');
   protected sttUseVad = signal(true);
+  protected sttKeyterms = signal('');
   // Latency tuning (raw knobs)
   protected sttEndpointingMs = signal(800);
   protected sttUtteranceEndMs = signal(1000);
@@ -141,7 +143,9 @@ export class SettingsComponent implements OnInit, OnDestroy {
     this.sttApiKey.set(settings?.stt.apiKey ?? '');
     this.sttEndpoint.set(settings?.stt.endpoint || this.whisperDefaults.endpoint);
     this.sttModel.set(settings?.stt.model || this.whisperDefaults.model);
+    this.sttDeepgramModel.set(settings?.stt.deepgramModel || 'nova-3');
     this.sttUseVad.set(settings?.stt.useVad ?? true);
+    this.sttKeyterms.set(settings?.stt.keyterms ?? '');
     this.sttEndpointingMs.set(settings?.stt.endpointingMs ?? 800);
     this.sttUtteranceEndMs.set(settings?.stt.utteranceEndMs ?? 1000);
     this.sttSentenceMaxWaitMs.set(settings?.stt.sentenceMaxWaitMs ?? 4000);
@@ -423,7 +427,9 @@ export class SettingsComponent implements OnInit, OnDestroy {
       apiKey: this.sttApiKey(),
       endpoint: this.sttEndpoint().trim(),
       model: this.sttModel().trim(),
+      deepgramModel: this.sttDeepgramModel(),
       useVad: this.sttUseVad(),
+      keyterms: this.sttKeyterms().trim(),
       endpointingMs: this.sttEndpointingMs(),
       utteranceEndMs: this.sttUtteranceEndMs(),
       sentenceMaxWaitMs: this.sttSentenceMaxWaitMs(),

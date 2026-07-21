@@ -5,9 +5,12 @@ metadata:
   node_type: memory
   type: project
   originSessionId: d1468163-6e3b-4140-8e02-a0b3d8eb0ee3
+  modified: 2026-07-21T12:04:21.564Z
 ---
 
 Non-obvious constraints discovered the hard way. Each cost real debugging time — check here first.
+
+**Adding an `AppSettings` field means THREE files, not two.** `shared/app-settings.d.ts` (schema) + `electron/config/default-settings.json` (main defaults) + **`src/app/core/services/electron-bridge.service.ts`**, which keeps its own hardcoded `DEFAULT_SETTINGS` fallback that must also satisfy the type. Miss the third and `npm run electron:compile` passes while `ng build` fails with `TS2739: ... is missing the following properties`. Cost a build cycle in Phase 6 (2026-07-21).
 
 **Web Speech API does NOT work in Electron.** Chromium's Electron build lacks Google's internal API keys for the speech service, so `webkitSpeechRecognition` always fails with `error: 'network'` no matter the CSP/connectivity. This is why STT uses DeepGram instead. Do not try to "fix" Web Speech API in Electron — it's unfixable.
 

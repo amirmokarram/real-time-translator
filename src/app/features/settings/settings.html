@@ -505,7 +505,7 @@
             <div class="provider-card-left">
               <div class="provider-name-row">
                 <span class="provider-card-name">
-                  {{ isWhisper() ? 'Whisper (Local)' : 'DeepGram Nova-2' }}
+                  {{ isWhisper() ? 'Whisper (Local)' : (sttDeepgramModel() === 'nova-2' ? 'DeepGram Nova-2' : 'DeepGram Nova-3') }}
                 </span>
                 <span class="active-chip">Active</span>
                 @if (isWhisper()) {
@@ -553,6 +553,37 @@
                   (input)="sttApiKey.set($any($event.target).value)"
                   autocomplete="off"
                   spellcheck="false">
+              </div>
+
+              <div class="field-group">
+                <label class="field-label">Model</label>
+                <select
+                  class="field-select"
+                  [ngModel]="sttDeepgramModel()"
+                  (ngModelChange)="sttDeepgramModel.set($event)"
+                  [ngModelOptions]="{ standalone: true }">
+                  <option value="nova-3">Nova-3 — best accuracy (recommended)</option>
+                  <option value="nova-2">Nova-2 — widest language coverage</option>
+                </select>
+                <p class="field-hint">
+                  <strong>Nova-3</strong> has the lowest error rate for English and major languages.
+                  Switch to <strong>Nova-2</strong> only if your source language isn't supported by Nova-3.
+                </p>
+              </div>
+
+              <div class="field-group">
+                <label class="field-label">Custom vocabulary <span class="field-label-opt">optional</span></label>
+                <textarea
+                  class="field-input field-textarea"
+                  rows="3"
+                  placeholder="One term per line — names, acronyms, product or company names, jargon&#10;e.g. Kubernetes&#10;Autodesk Revit&#10;idempotency"
+                  [value]="sttKeyterms()"
+                  (input)="sttKeyterms.set($any($event.target).value)"
+                  spellcheck="false"></textarea>
+                <p class="field-hint">
+                  Boosts recognition of hard-to-hear terms (up to 100). Add the words DeepGram keeps
+                  mishearing in your meetings. Sent as {{ sttDeepgramModel() === 'nova-2' ? 'keywords' : 'keyterm prompting' }}.
+                </p>
               </div>
             } @else {
               <!-- Whisper (local, WhisperLive) -->

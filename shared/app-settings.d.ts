@@ -31,7 +31,12 @@ export interface AppSettings {
     apiKey: string;         // DeepGram key; unused by the local Whisper server
     endpoint: string;       // Whisper only: WhisperLive WebSocket URL (ws://host:port)
     model: string;          // Whisper only: model size/name the server should load
+    deepgramModel: string;  // DeepGram only: 'nova-3' (best accuracy, newer) | 'nova-2' (widest language coverage)
     useVad: boolean;        // Whisper only: let the server gate on voice activity
+    // Custom vocabulary: names, acronyms, product terms, jargon to bias recognition
+    // toward. Newline/comma separated. DeepGram sends it as keyterm (Nova-3) or
+    // keywords (Nova-2); shared field so it survives an engine switch.
+    keyterms: string;
     // ── Latency tuning (lower = snappier, but more fragmented/less accurate) ──
     endpointingMs: number;     // DeepGram only: silence (ms) before a fragment is finalized
     utteranceEndMs: number;    // DeepGram only: end-of-utterance backstop (ms); API floor is 1000

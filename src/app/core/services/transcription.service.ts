@@ -54,6 +54,23 @@ export class TranscriptionService {
     return new RegExp(`[${p}]["')\\]]?\\s*$`);
   }
 
+  // Custom-vocabulary field → clean term list. Users type one term per line (or
+  // comma-separated); we split on both, trim, drop blanks, and dedupe. The
+  // backend caps the count, so order (not length) is all we preserve here.
+  private static parseKeyterms(raw: string | undefined): string[] {
+    if (!raw?.trim()) return [];
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const term of raw.split(/[\n,]/)) {
+      const t = term.trim();
+      if (t && !seen.has(t.toLowerCase())) {
+        seen.add(t.toLowerCase());
+        out.push(t);
+      }
+    }
+    return out;
+  }
+
   // Semantic events from whichever backend is streaming. The protocol-specific
   // parsing lives in the strategy; here we only do sentence segmentation.
   private readonly callbacks: SttCallbacks = {
@@ -110,7 +127,14 @@ export class TranscriptionService {
       this.stream = new DeepGramStream();
       await this.stream.start(
         stream,
-        { language: lang, apiKey, endpointingMs: stt?.endpointingMs, utteranceEndMs: stt?.utteranceEndMs },
+        {
+          language: lang,
+          apiKey,
+          model: stt?.deepgramModel,
+          keyterms: TranscriptionService.parseKeyterms(stt?.keyterms),
+          endpointingMs: stt?.endpointingMs,
+          utteranceEndMs: stt?.utteranceEndMs,
+        },
         this.callbacks,
       );
     }

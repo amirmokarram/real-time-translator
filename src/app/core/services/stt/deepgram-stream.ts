@@ -53,8 +53,9 @@ export class DeepGramStream implements ISttStream {
 
   private connect(): Promise<void> {
     return new Promise<void>((resolve, reject) => {
+      const model = this.opts.model?.trim() || 'nova-3';
       const params = new URLSearchParams({
-        model: 'nova-2',
+        model,
         language: this.opts.language.split('-')[0],   // 'en-US' → 'en'
         interim_results: 'true',
         smart_format: 'true',
@@ -67,6 +68,16 @@ export class DeepGramStream implements ISttStream {
         utterance_end_ms: String(Math.max(1000, this.opts.utteranceEndMs ?? 1000)),
         vad_events: 'true',
       });
+
+      // Custom-vocabulary biasing. The parameter name is model-specific: Nova-3
+      // uses `keyterm` (plain terms, no weight); Nova-2 and earlier use the legacy
+      // `keywords`. DeepGram caps this at 100 terms. URLSearchParams handles the
+      // per-term URL-encoding (spaces, punctuation) for us.
+      const terms = (this.opts.keyterms ?? []).slice(0, 100);
+      if (terms.length) {
+        const param = model.startsWith('nova-3') ? 'keyterm' : 'keywords';
+        for (const term of terms) params.append(param, term);
+      }
 
       // DeepGram WebSocket auth uses a subprotocol token — works from browser without custom headers
       const url = `wss://api.deepgram.com/v1/listen?${params}`;
