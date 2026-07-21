@@ -15,6 +15,9 @@ interface Fixtures {
   page: Page;
   // Destination the E2E export-dialog bypass writes to (assert its contents).
   exportPath: string;
+  // Empty temp folder session recordings are written to. Injected into the seed
+  // whenever a test enables recording, so specs can list it and assert on files.
+  recordingsDir: string;
 }
 
 export const test = base.extend<Fixtures>({
@@ -26,12 +29,23 @@ export const test = base.extend<Fixtures>({
     await fs.rm(dir, { recursive: true, force: true });
   },
 
-  userDataDir: async ({ seed }, use) => {
+  recordingsDir: async ({}, use) => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'rtt-e2e-rec-'));
+    await use(dir);
+    await fs.rm(dir, { recursive: true, force: true });
+  },
+
+  userDataDir: async ({ seed, recordingsDir }, use) => {
     // Fresh userData per test → isolated settings.json, no cross-test bleed.
     const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'rtt-e2e-'));
+    // A test that asks for recording gets the temp folder for free; it can still
+    // override folderPath explicitly if it needs to point somewhere else.
+    const merged = seed.recording
+      ? { ...seed, recording: { folderPath: recordingsDir, ...seed.recording } }
+      : seed;
     await fs.writeFile(
       path.join(dir, 'settings.json'),
-      JSON.stringify(buildSeedSettings(seed), null, 2),
+      JSON.stringify(buildSeedSettings(merged), null, 2),
       'utf-8'
     );
     await use(dir);

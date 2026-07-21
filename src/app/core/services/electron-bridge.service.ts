@@ -7,6 +7,11 @@ import {
   BankMatch,
   ElectronAPI,
   ProviderMeta,
+  RecordingSession,
+  RecordingStartResult,
+  RecordingStopResult,
+  RecordingTrack,
+  SessionNotes,
   TranslationResult,
 } from '../models/app.models';
 
@@ -30,6 +35,9 @@ const mockSettings: AppSettings = {
   assist: { provider: 'claude', model: 'claude-sonnet-4-6', endpoint: 'http://localhost:11434' },
   prompts: { assist: '', translation: '', interviewAnswer: '', interviewAnswerFile: '' },
   audio: { selectedSourceId: null },
+  recording: {
+    enabled: true, folderPath: '', mode: 'mix', micDeviceId: '', micGain: 100, bitrateKbps: 64,
+  },
   questionBank: { folderPath: '', maxResults: 3 },
   display: { fontSize: 16, showInterimResults: true, historyLength: 50 },
   tray: { closeToTray: true },
@@ -199,6 +207,46 @@ export class ElectronBridgeService {
     a.click();
     URL.revokeObjectURL(url);
     return Promise.resolve({ saved: true });
+  }
+
+  // ── Session recording ──────────────────────────────────────────────────────
+  // No browser fallback: writing a meeting to disk needs the main process, so in
+  // dev-in-a-browser these resolve to a no-op and RecordingService stays idle.
+
+  recordingStart(tracks: RecordingTrack[]): Promise<RecordingStartResult> {
+    return this.api?.recordingStart({ tracks }) ?? Promise.resolve({ paths: {} });
+  }
+
+  recordingChunk(track: RecordingTrack, chunk: Uint8Array): Promise<void> {
+    return this.api?.recordingChunk({ track, chunk }) ?? Promise.resolve();
+  }
+
+  recordingStop(): Promise<RecordingStopResult> {
+    return this.api?.recordingStop() ?? Promise.resolve({ files: [] });
+  }
+
+  recordingSaveTranscript(content: string): Promise<{ path: string | null }> {
+    return this.api?.recordingSaveTranscript({ content }) ?? Promise.resolve({ path: null });
+  }
+
+  recordingPickFolder(): Promise<{ path: string | null }> {
+    return this.api?.recordingPickFolder() ?? Promise.resolve({ path: null });
+  }
+
+  recordingList(): Promise<RecordingSession[]> {
+    return this.api?.recordingList() ?? Promise.resolve([]);
+  }
+
+  recordingSaveNotes(file: string, notes: SessionNotes): Promise<{ saved: boolean; error?: string }> {
+    return this.api?.recordingSaveNotes({ file, notes }) ?? Promise.resolve({ saved: false });
+  }
+
+  recordingReveal(file: string): Promise<void> {
+    return this.api?.recordingReveal({ file }) ?? Promise.resolve();
+  }
+
+  recordingDelete(file: string): Promise<{ deleted: boolean; error?: string }> {
+    return this.api?.recordingDelete({ file }) ?? Promise.resolve({ deleted: false });
   }
 
   // ── Overlay ────────────────────────────────────────────────────────────────

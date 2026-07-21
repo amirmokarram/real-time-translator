@@ -9,6 +9,12 @@ import { MockSttStream } from './stt/mock-stream';
 export interface PendingSentence {
   text: string;
   confidence?: number;
+  /**
+   * Epoch ms when this sentence STARTED being recognized — not when it was
+   * committed. Seeking a recording needs the moment the words were spoken, and a
+   * sentence is only finalized a second or more after the speaker began it.
+   */
+  startedAt?: number;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -48,6 +54,11 @@ export class TranscriptionService {
   // Fragments don't map cleanly onto sentences after segmentation, so we attach
   // the worst-case value — a sentence is only as trustworthy as its shakiest part.
   private bufferConfidence: number | null = null;
+
+  // When the fragments currently in `pendingFinal` started arriving. Mirrors
+  // bufferConfidence: set as the buffer fills from empty, cleared when it drains.
+  // This is the closest thing we have to "when the speaker said this".
+  private bufferStartedAt: number | null = null;
 
   // The active streaming backend (DeepGram today; Whisper added in Phase C).
   private stream: ISttStream | null = null;
@@ -103,6 +114,8 @@ export class TranscriptionService {
           this.bufferConfidence =
             this.bufferConfidence === null ? confidence : Math.min(this.bufferConfidence, confidence);
         }
+        // First fragment of a new sentence — remember when it landed.
+        if (this.bufferStartedAt === null) this.bufferStartedAt = Date.now();
         this.pendingFinal = `${this.pendingFinal} ${text}`.trim();
         this.drainSentences();
       }
@@ -132,6 +145,7 @@ export class TranscriptionService {
     this.confidenceSum = 0;
     this.confidenceCount = 0;
     this.bufferConfidence = null;
+    this.bufferStartedAt = null;
 
     // Apply latency-tuning knobs for this session.
     this.sentenceMaxWaitMs = stt?.sentenceMaxWaitMs ?? 4000;
@@ -234,7 +248,8 @@ export class TranscriptionService {
   // Queue a finished sentence for the consumer and update the display fallback.
   private emitSentence(sentence: string): void {
     const confidence = this.bufferConfidence ?? undefined;
-    this.pendingSentences.push({ text: sentence, confidence });
+    const startedAt = this.bufferStartedAt ?? undefined;
+    this.pendingSentences.push({ text: sentence, confidence, startedAt });
     this.lastFinalText.set(sentence);
     this.finalVersion.update((v) => v + 1);
 
@@ -247,8 +262,11 @@ export class TranscriptionService {
       }
     }
 
-    // Buffer drained → the next sentence starts its own confidence window.
-    if (!this.pendingFinal.trim()) this.bufferConfidence = null;
+    // Buffer drained → the next sentence starts its own confidence/timing window.
+    if (!this.pendingFinal.trim()) {
+      this.bufferConfidence = null;
+      this.bufferStartedAt = null;
+    }
   }
 
   private endsSentence(text: string): boolean {

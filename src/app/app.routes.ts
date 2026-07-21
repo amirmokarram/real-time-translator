@@ -7,6 +7,11 @@ export const routes: Routes = [
       import('./features/translator/translator').then((m) => m.TranslatorComponent),
   },
   {
+    path: 'review',
+    loadComponent: () =>
+      import('./features/review/review').then((m) => m.ReviewComponent),
+  },
+  {
     path: 'settings',
     loadComponent: () =>
       import('./features/settings/settings').then((m) => m.SettingsComponent),

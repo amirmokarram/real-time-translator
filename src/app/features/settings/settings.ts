@@ -2,7 +2,9 @@ import { Component, inject, signal, OnInit, OnDestroy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { SettingsService } from '../../core/services/settings.service';
 import { ElectronBridgeService } from '../../core/services/electron-bridge.service';
-import { AppSettings, ProviderMeta } from '../../core/models/app.models';
+import { AudioService } from '../../core/services/audio.service';
+import { RecordingService } from '../../core/services/recording.service';
+import { AppSettings, AudioSource, ProviderMeta } from '../../core/models/app.models';
 import { LANGUAGES } from '../../core/models/languages';
 
 interface ProviderFormState {
@@ -16,6 +18,7 @@ type SettingsNode =
   | 'general'
   | 'hotkeys'
   | 'languages'
+  | 'recording'
   | 'translation-providers'
   | 'translation-prompt'
   | 'stt-engine'
@@ -35,6 +38,12 @@ type HotkeyKey = keyof AppSettings['hotkeys'];
 export class SettingsComponent implements OnInit, OnDestroy {
   protected settingsSvc = inject(SettingsService);
   protected bridge = inject(ElectronBridgeService);
+  private audio = inject(AudioService);
+  private recording = inject(RecordingService);
+
+  // Microphones offered as the recording input. Same enumeration the capture
+  // source dropdown uses; loaded on demand since Settings can be opened first.
+  protected microphones = signal<AudioSource[]>([]);
 
   protected providerStates = signal<Record<string, ProviderFormState>>({});
   protected activeNode = signal<SettingsNode>('general');
@@ -154,6 +163,11 @@ export class SettingsComponent implements OnInit, OnDestroy {
     this.sttCommitOnClause.set(settings?.stt.commitOnClause ?? false);
     this.sttLivePartial.set(settings?.stt.livePartial ?? false);
     this.sttPartialDebounceMs.set(settings?.stt.partialDebounceMs ?? 600);
+
+    // Mic list for the recording panel. The ids carry a 'mic:' prefix for the
+    // capture dropdown; the recording setting stores the bare deviceId.
+    if (this.audio.sources().length === 0) await this.audio.loadSources().catch(() => {});
+    this.microphones.set(this.audio.sources().filter((s) => s.kind === 'microphone'));
 
     this.assistProvider.set(settings?.assist.provider ?? 'claude');
     this.assistModel.set(settings?.assist.model ?? '');
@@ -664,6 +678,49 @@ export class SettingsComponent implements OnInit, OnDestroy {
     if (!Number.isFinite(value)) return;
     const clamped = Math.min(1000, Math.max(1, Math.round(value)));
     await this.settingsSvc.updateDisplay({ historyLength: clamped });
+  }
+
+  // ── Session recording ─────────────────────────────────────────────────────────
+  // mode / microphone / bitrate are read when the recorder is built, so they take
+  // effect on the next Start Capture. micGain is the exception — it drives a live
+  // GainNode, so it is applied to a running recording immediately.
+
+  protected async setRecordingEnabled(value: boolean): Promise<void> {
+    await this.settingsSvc.updateRecording({ enabled: value });
+  }
+
+  protected async setRecordingMode(mode: AppSettings['recording']['mode']): Promise<void> {
+    await this.settingsSvc.updateRecording({ mode });
+  }
+
+  protected async setRecordingMic(deviceId: string): Promise<void> {
+    await this.settingsSvc.updateRecording({ micDeviceId: deviceId });
+  }
+
+  // Capture-source ids are prefixed ('mic:<deviceId>'); the recording setting
+  // stores the bare deviceId that getUserMedia expects.
+  protected micId(source: AudioSource): string {
+    return source.id.replace(/^mic:/, '');
+  }
+
+  protected async setRecordingMicGain(value: number): Promise<void> {
+    if (!Number.isFinite(value)) return;
+    const clamped = Math.min(200, Math.max(0, Math.round(value)));
+    await this.settingsSvc.updateRecording({ micGain: clamped });
+    this.recording.setMicGain(clamped);
+  }
+
+  protected async setRecordingBitrate(value: number): Promise<void> {
+    await this.settingsSvc.updateRecording({ bitrateKbps: value });
+  }
+
+  protected async pickRecordingFolder(): Promise<void> {
+    const { path } = await this.bridge.recordingPickFolder();
+    if (path) await this.settingsSvc.updateRecording({ folderPath: path });
+  }
+
+  protected async clearRecordingFolder(): Promise<void> {
+    await this.settingsSvc.updateRecording({ folderPath: '' });
   }
 
   // ── Question Bank ─────────────────────────────────────────────────────────────

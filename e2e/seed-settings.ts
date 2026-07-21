@@ -9,6 +9,11 @@ export interface SeedOverrides {
   // Question Bank: point at a fixture folder of markdown Q&A files so the assist
   // panel's "Query From Q Bank" path is testable. Omitted → no bank configured.
   questionBank?: { folderPath: string; maxResults?: number };
+  // Session recording. Off unless a test asks for it, so the other specs don't
+  // write meeting files while exercising capture. `mode` defaults to 'source':
+  // the fake media device gives us one usable input, and mixing a second one in
+  // would only add moving parts to an assertion about files on disk.
+  recording?: { enabled: boolean; folderPath?: string; mode?: string };
 }
 
 export function buildSeedSettings(overrides: SeedOverrides = {}): unknown {
@@ -39,6 +44,15 @@ export function buildSeedSettings(overrides: SeedOverrides = {}): unknown {
       : {}),
     prompts: { assist: '', translation: '' },
     audio: { selectedSourceId: null },
+    recording: {
+      enabled: false,
+      folderPath: '',
+      mode: 'source',
+      micDeviceId: '',
+      micGain: 100,
+      bitrateKbps: 64,
+      ...overrides.recording,
+    },
     display: { fontSize: 16, showInterimResults: true, historyLength: 50 },
   };
 }

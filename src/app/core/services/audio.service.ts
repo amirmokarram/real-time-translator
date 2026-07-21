@@ -1,6 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { AudioSource } from '../models/app.models';
 import { ElectronBridgeService } from './electron-bridge.service';
+import { RecordingService } from './recording.service';
 import { TranscriptionService } from './transcription.service';
 
 // Chromium-specific constraint shape — not in the standard TypeScript lib
@@ -33,6 +34,7 @@ interface CaptureResources {
 export class AudioService {
   private bridge = inject(ElectronBridgeService);
   private transcription = inject(TranscriptionService);
+  private recording = inject(RecordingService);
 
   readonly sources = signal<AudioSource[]>([]);
   readonly selectedSource = signal<AudioSource | null>(null);
@@ -107,6 +109,11 @@ export class AudioService {
       await this.transcription.start(this.resources!.stream).catch((err: unknown) => {
         this.captureError.set(err instanceof Error ? err.message : String(err));
       });
+
+      // Record the session to disk. Deliberately last and deliberately silent on
+      // failure: recording is the secondary job, and it must never be the reason
+      // translation doesn't run. RecordingService reports its own errors.
+      await this.recording.start(stream, source);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       this.captureError.set(this.humanizeError(msg));
@@ -119,6 +126,10 @@ export class AudioService {
 
     this.isCapturing.set(false);
     this.audioLevel.set(0);
+
+    // Close the recording before the tracks are stopped, so the recorder can
+    // flush its last chunk from a stream that is still live.
+    await this.recording.stop();
 
     if (this.resources) {
       cancelAnimationFrame(this.resources.frameId);

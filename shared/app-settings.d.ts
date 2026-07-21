@@ -73,6 +73,30 @@ export interface AppSettings {
   audio: {
     selectedSourceId: string | null;
   };
+  // Session audio recording. Runs alongside capture (never gates it) and writes
+  // one file per capture session so a meeting can be re-listened to afterwards.
+  // The recorded mix is INDEPENDENT of what is sent to the STT backend: mixing the
+  // microphone in here does not make the user's own voice get transcribed.
+  recording: {
+    enabled: boolean;
+    // Where session files are written. '' = <userData>/recordings.
+    folderPath: string;
+    // What ends up in the file: 'source' (only the captured source, i.e. exactly
+    // what is transcribed today) | 'mix' (captured source + microphone in one
+    // file) | 'separate' (the same two inputs as two files). Mic modes only do
+    // anything when capturing system audio — capturing a mic already records it.
+    // Typed as string, not a union, so default-settings.json still type-checks
+    // against this interface (JSON imports widen literals) — same as stt.provider.
+    mode: string;
+    // Which microphone to mix/record. '' = system default device.
+    micDeviceId: string;
+    // Mic level as a percentage of system audio (100 = equal). Applied live via a
+    // GainNode, so it can be corrected mid-meeting.
+    micGain: number;
+    // Opus bitrate (kbps) of the recording. Independent of stt.audioBitrateKbps:
+    // that one feeds a recognizer, this one is for listening back.
+    bitrateKbps: number;
+  };
   // Question Bank — a local folder of markdown Q&A files. The assist panel's
   // "Query From Q Bank" action searches it, surfaces matching files, and folds
   // their content into the assist context to ground first-person answers.

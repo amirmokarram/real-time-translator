@@ -24,6 +24,15 @@
       </li>
 
       <li>
+        <button class="tree-item tree-leaf-top" [class.active]="activeNode() === 'recording'" (click)="activeNode.set('recording')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4" fill="currentColor" stroke="none"/>
+          </svg>
+          Recording
+        </button>
+      </li>
+
+      <li>
         <button class="tree-item tree-leaf-top" [class.active]="activeNode() === 'languages'" (click)="activeNode.set('languages')">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/>
@@ -227,6 +236,147 @@
               <span class="range-value">files</span>
             </div>
           </div>
+        }
+      </section>
+    }
+
+    <!-- ── Recording ────────────────────────────────────────────────────────── -->
+    @if (activeNode() === 'recording') {
+      <section class="settings-section">
+        <h2 class="section-title">Session Recording</h2>
+        <p class="section-desc">
+          Records the audio of each capture session to a file so a meeting can be
+          reviewed afterwards. The recording is separate from what is sent to speech
+          recognition — mixing your microphone in here does not make your own voice
+          get transcribed and translated.
+        </p>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <label class="setting-label">Record Sessions</label>
+            <span class="setting-desc">
+              Start and stop automatically with audio capture — one file per session.
+            </span>
+          </div>
+          <div class="setting-control">
+            <button
+              class="toggle-btn"
+              [class.on]="settingsSvc.settings()?.recording?.enabled"
+              (click)="setRecordingEnabled(!settingsSvc.settings()?.recording?.enabled)">
+              <span class="toggle-thumb"></span>
+            </button>
+          </div>
+        </div>
+
+        @if (settingsSvc.settings()?.recording?.enabled) {
+          <div class="setting-row">
+            <div class="setting-info">
+              <label class="setting-label">What To Record</label>
+              <span class="setting-desc">
+                The microphone options only apply when you capture system audio —
+                capturing a microphone already records that voice. Takes effect on
+                the next Start Capture.
+              </span>
+            </div>
+            <div class="setting-control">
+              <select
+                class="field-select"
+                [ngModel]="settingsSvc.settings()?.recording?.mode ?? 'mix'"
+                (ngModelChange)="setRecordingMode($event)"
+                [ngModelOptions]="{ standalone: true }">
+                <option value="source">Captured source only</option>
+                <option value="mix">Mix in my microphone</option>
+                <option value="separate">Two separate files</option>
+              </select>
+            </div>
+          </div>
+
+          @if (settingsSvc.settings()?.recording?.mode !== 'source') {
+            <div class="setting-row">
+              <div class="setting-info">
+                <label class="setting-label">Microphone</label>
+                <span class="setting-desc">Which mic records your side of the conversation.</span>
+              </div>
+              <div class="setting-control">
+                <select
+                  class="field-select"
+                  [ngModel]="settingsSvc.settings()?.recording?.micDeviceId ?? ''"
+                  (ngModelChange)="setRecordingMic($event)"
+                  [ngModelOptions]="{ standalone: true }">
+                  <option value="">System default</option>
+                  @for (mic of microphones(); track mic.id) {
+                    <option [value]="micId(mic)">{{ mic.name }}</option>
+                  }
+                </select>
+              </div>
+            </div>
+
+            @if (settingsSvc.settings()?.recording?.mode === 'mix') {
+              <div class="setting-row">
+                <div class="setting-info">
+                  <label class="setting-label">Microphone Level</label>
+                  <span class="setting-desc">
+                    Your voice relative to the meeting audio (100% = equal). Applies
+                    immediately, even mid-recording.
+                  </span>
+                </div>
+                <div class="setting-control">
+                  <input
+                    class="range-input"
+                    type="range" min="0" max="200" step="10"
+                    [value]="settingsSvc.settings()?.recording?.micGain ?? 100"
+                    (input)="setRecordingMicGain(+$any($event.target).value)">
+                  <span class="range-value">{{ settingsSvc.settings()?.recording?.micGain ?? 100 }}%</span>
+                </div>
+              </div>
+            }
+          }
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <label class="setting-label">Audio Quality</label>
+              <span class="setting-desc">
+                Higher sounds better and costs more disk — 64 kbps is roughly 30 MB
+                per hour. Independent of the speech-recognition bitrate. Takes effect
+                on the next Start Capture.
+              </span>
+            </div>
+            <div class="setting-control">
+              <select
+                class="field-select"
+                [ngModel]="settingsSvc.settings()?.recording?.bitrateKbps ?? 64"
+                (ngModelChange)="setRecordingBitrate(+$event)"
+                [ngModelOptions]="{ standalone: true }">
+                <option [value]="32">32 kbps — smallest</option>
+                <option [value]="64">64 kbps — recommended</option>
+                <option [value]="96">96 kbps — high</option>
+                <option [value]="128">128 kbps — highest</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <label class="setting-label">Save Recordings To</label>
+              <span class="setting-desc">
+                Leave unset to keep them in the app's own data folder.
+              </span>
+            </div>
+            <div class="setting-control">
+              <button class="field-btn" (click)="pickRecordingFolder()">Browse…</button>
+              @if (settingsSvc.settings()?.recording?.folderPath) {
+                <button class="field-btn" (click)="clearRecordingFolder()" title="Use the default folder">Clear</button>
+              }
+            </div>
+          </div>
+
+          @if (settingsSvc.settings()?.recording?.folderPath; as recPath) {
+            <div class="setting-row">
+              <div class="setting-info">
+                <span class="setting-desc bank-path">{{ recPath }}</span>
+              </div>
+            </div>
+          }
         }
       </section>
     }

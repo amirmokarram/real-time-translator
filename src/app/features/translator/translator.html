@@ -114,6 +114,16 @@
       <button class="error-close" (click)="transcription.error.set(null)">✕</button>
     </div>
   }
+  <!-- Recording problems are never fatal — capture and translation carry on. -->
+  @if (recording.error()) {
+    <div class="error-banner">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      {{ recording.error() }}
+      <button class="error-close" (click)="recording.error.set(null)">✕</button>
+    </div>
+  }
 
   <!-- ── Live panel (capturing) / Manual input (idle) ───────────────────── -->
   @if (audio.isCapturing()) {
@@ -200,6 +210,12 @@
         Start Capture
       }
     </button>
+
+    @if (recording.isRecording()) {
+      <span class="rec-badge" title="This session is being recorded to disk">
+        <span class="rec-dot"></span> REC {{ recElapsed() }}
+      </span>
+    }
 
     @if (sttQualityLabel(); as quality) {
       <span

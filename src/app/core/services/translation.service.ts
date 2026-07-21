@@ -22,7 +22,13 @@ export class TranslationService {
 
   // `confidence` is the STT backend's certainty in `englishText` (absent for typed
   // input). Carried onto the entry purely so the UI can flag a shaky row.
-  async translate(englishText: string, confidence?: number): Promise<TranslationResult> {
+  // `startedAt` is when the speech began — it outlives this call as the anchor a
+  // session recording is seeked by.
+  async translate(
+    englishText: string,
+    confidence?: number,
+    startedAt?: number
+  ): Promise<TranslationResult> {
     if (!englishText.trim()) throw new Error('Empty input');
 
     this.isTranslating.set(true);
@@ -49,6 +55,7 @@ export class TranslationService {
         processingTimeMs: result.processingTimeMs,
         timestamp: new Date(),
         confidence,
+        startedAt,
       };
 
       // Add newest at the END so history scrolls upward naturally

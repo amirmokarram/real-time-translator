@@ -5,6 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: efb6c1f4-0f8c-44d0-8361-1634d470274d
+  modified: 2026-07-21T16:59:48.951Z
 ---
 
 Playwright E2E tests live in `e2e/` and drive the **built** Electron app + real Angular
@@ -42,6 +43,28 @@ echoes `routerUserMessage(q)` back, so a digit in the question parses as that ma
 (fixture files in `e2e/bank-fixtures/` index alphabetically 1=closures, 2=DI, 3=event-loop),
 and a digit-free question echoes the prompt's own "NONE" → `parseSelection` → []. Seed gained
 `questionBank.folderPath` override (`seed-settings.ts`). **25 passed, 1 skipped locally.**
+**Recording / Review / Notes coverage (added 2026-07-21):** `e2e/recording.spec.ts` — 11 tests
+across Phases 7–9 (see [[phase-status]]). **The MediaRecorder here is REAL:** the harness already
+launches with `--use-fake-device-for-media-stream`, so capture produces genuine (silent) WebM and
+the assertions exercise the actual renderer → IPC → write-stream path, no stubs. New fixture
+`recordingsDir` (temp folder, auto-injected into the seed whenever a test sets `seed.recording`);
+`SeedOverrides.recording` defaults **enabled: false** so the other specs don't write meeting files
+while exercising capture. Covered: non-empty correctly-named `.webm`; sidecar pairs with its audio
+and has ordered offsets within `durationMs`; typed rows excluded; **recording failure doesn't stop
+translation** (seeded folder path replaced with a *file* so mkdir fails); Review lists/plays/seeks;
+**audio really loads over `rec://`** (asserts `readyState`-ish via `el.error === null` — catches a
+CSP `media-src` or protocol-handler regression); missing sidecar still plays; notes persist and
+**the merge leaves the transcript untouched**; notes reload from disk after navigating away;
+session Ask carries the whole transcript, per-line Ask carries **only** that line (`toHaveText`, so
+a leak of the whole meeting fails). **40 passed, 1 skipped locally.**
+
+**Gotcha that cost real time:** `npx playwright test` / `npm run e2e:only` do **NOT rebuild** the
+renderer — only `npm run e2e` does (`electron:build && playwright test`). Debugging a renderer
+change against a stale `dist/` bundle looks exactly like the feature being broken. Rebuild first.
+
 Still uncovered by e2e (deliberate seams or just not written): real STT/translation/assist
 providers, language-pair switching UI, latency knobs, history length, assist prompt editors,
-`bank:open` card click (would launch the OS file handler).
+`bank:open` card click (would launch the OS file handler). **Recording-specific gaps:** the
+`mix`/`separate` mic modes are inert under test (the fake device only offers a *microphone*, and
+mic modes only engage for **system audio**), and seeking is only proven on a few seconds of
+silence — not on a long cue-less WebM.

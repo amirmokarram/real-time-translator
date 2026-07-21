@@ -23,7 +23,10 @@ export class CommandService {
   }
 
   // Mirrors TranslatorComponent.toggleCapture: stop also clears the live
-  // partial preview so no stale in-progress row lingers.
+  // partial preview so no stale in-progress row lingers. Finishing the session
+  // (draining the last sentence, filing the recording's transcript) is NOT
+  // duplicated here — the translator watches isCapturing() and handles it for
+  // whichever path stopped the capture.
   private async toggleCapture(): Promise<void> {
     if (this.audio.isCapturing()) {
       await this.audio.stopCapture();

@@ -1,0 +1,210 @@
+<div class="review-layout">
+
+  <!-- ── Session list ──────────────────────────────────────────────────────── -->
+  <aside class="session-list">
+    <div class="list-header">
+      <span class="list-title">Recorded Sessions</span>
+      <button class="icon-btn" (click)="refresh()" title="Refresh list">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M23 4v6h-6M1 20v-6h6"/>
+          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+        </svg>
+      </button>
+    </div>
+
+    @if (loading()) {
+      <p class="list-empty">Loading…</p>
+    } @else if (sessions().length === 0) {
+      <p class="list-empty">
+        No recordings yet. Sessions are saved automatically while recording is
+        enabled in Settings → Recording.
+      </p>
+    } @else {
+      @for (session of sessions(); track session.file) {
+        <button
+          class="session-item"
+          [class.active]="selected()?.file === session.file"
+          (click)="select(session)"
+          [title]="session.path">
+          <span class="session-when">{{ sessionLabel(session) }}</span>
+          <span class="session-meta">{{ sessionMeta(session) }}</span>
+        </button>
+      }
+    }
+  </aside>
+
+  <!-- ── Player + transcript ───────────────────────────────────────────────── -->
+  <div class="session-detail">
+
+    @if (error()) {
+      <div class="error-banner">
+        {{ error() }}
+        <button class="error-close" (click)="error.set(null)">✕</button>
+      </div>
+    }
+
+    @if (selected(); as session) {
+      <div class="player-bar">
+        <button class="play-btn" (click)="togglePlay()" [title]="playing() ? 'Pause' : 'Play'">
+          @if (playing()) {
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/>
+            </svg>
+          } @else {
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M8 5l11 7-11 7z"/>
+            </svg>
+          }
+        </button>
+
+        <span class="time-label">{{ clock(positionMs()) }}</span>
+
+        <!-- Scrubber is driven by the sidecar's durationMs: the streamed WebM has
+             no duration in its header, so the element's own would read Infinity. -->
+        <div class="progress" (click)="scrub($event)">
+          <div class="progress-fill" [style.width]="progressPercent"></div>
+        </div>
+
+        <span class="time-label">{{ clock(durationMs) }}</span>
+
+        @if (entries.length > 0) {
+          <button
+            class="ask-btn"
+            (click)="askSession()"
+            [title]="transcriptIsLarge
+              ? 'Ask about this meeting — it is a long one, so a local model with a small context window may not see all of it'
+              : 'Ask the assistant about this meeting'">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+            Ask
+            @if (transcriptIsLarge) {
+              <span class="ask-warn" aria-hidden="true">!</span>
+            }
+          </button>
+        }
+
+        <button class="icon-btn" (click)="reveal(session)" title="Show in folder">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+          </svg>
+        </button>
+        <button class="icon-btn danger" (click)="remove(session)" title="Move this recording to the trash">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="3 6 5 6 21 6"/>
+            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+            <path d="M10 11v6M14 11v6M9 6V4h6v2"/>
+          </svg>
+        </button>
+
+        <audio
+          #player
+          [src]="audioSrc"
+          (timeupdate)="onTimeUpdate()"
+          (play)="playing.set(true)"
+          (pause)="playing.set(false)"
+          (ended)="playing.set(false)"></audio>
+      </div>
+
+      @if (entries.length === 0) {
+        <div class="detail-empty">
+          <p>This recording has no transcript.</p>
+          <p class="detail-hint">
+            The audio still plays — only the clickable lines are missing, which
+            happens when a session ended before its transcript was written.
+          </p>
+        </div>
+      } @else {
+        <div class="col-headers">
+          <div class="col-header">
+            <span class="lang-label"><span class="lang-flag">{{ sourceLang.flag }}</span> {{ sourceLang.nativeName }}</span>
+          </div>
+          <div class="col-header">
+            <span class="lang-label"><span class="lang-flag">{{ targetLang.flag }}</span> {{ targetLang.nativeName }}</span>
+          </div>
+        </div>
+
+        <div class="transcript-scroll">
+          @for (entry of entries; track $index) {
+            <div
+              class="transcript-row"
+              [class.active]="activeIndex() === $index"
+              [class.noted]="hasNote(entry.offsetMs)"
+              (click)="seekTo(entry.offsetMs)"
+              title="Jump to this moment">
+              <div class="tcell">
+                <p class="tcell-text" [class.rtl-text]="sourceLang.rtl" [attr.dir]="sourceLang.rtl ? 'rtl' : 'ltr'">{{ entry.source }}</p>
+                <span class="tcell-meta">{{ clock(entry.offsetMs) }}</span>
+              </div>
+              <div class="tcell tcell-target">
+                <p class="tcell-text target-text" [class.rtl-text]="targetLang.rtl" [attr.dir]="targetLang.rtl ? 'rtl' : 'ltr'">{{ entry.target }}</p>
+              </div>
+
+              <div class="row-actions">
+                <button
+                  class="row-btn"
+                  (click)="askLine(entry, $event)"
+                  title="Ask the assistant about this line">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                  </svg>
+                </button>
+                <button
+                  class="row-btn note-btn"
+                  [class.has-note]="hasNote(entry.offsetMs)"
+                  (click)="toggleNoteEditor(entry.offsetMs, $event)"
+                  [title]="hasNote(entry.offsetMs) ? 'Edit note' : 'Add a note on this line'">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            @if (editingNote() === entry.offsetMs || hasNote(entry.offsetMs)) {
+              <div class="line-note" (click)="$event.stopPropagation()">
+                @if (editingNote() === entry.offsetMs) {
+                  <textarea
+                    class="note-input"
+                    rows="2"
+                    placeholder="Note on this line…"
+                    [ngModel]="noteFor(entry.offsetMs)"
+                    (ngModelChange)="onLineNoteChange(entry.offsetMs, $event)"
+                    (blur)="flushNotes()"
+                    [ngModelOptions]="{ standalone: true }"></textarea>
+                } @else {
+                  <p class="note-text" (click)="toggleNoteEditor(entry.offsetMs, $event)">{{ noteFor(entry.offsetMs) }}</p>
+                }
+              </div>
+            }
+          }
+        </div>
+
+        <!-- ── Session notes ───────────────────────────────────────────────── -->
+        <div class="session-notes">
+          <div class="notes-header">
+            <span class="notes-title">Session Notes</span>
+            @if (savingNote()) {
+              <span class="notes-status">Saving…</span>
+            } @else if (noteSaved()) {
+              <span class="notes-status saved">Saved</span>
+            }
+          </div>
+          <textarea
+            class="note-input session-note-input"
+            rows="3"
+            placeholder="Takeaways, follow-ups, anything worth keeping from this meeting…"
+            [ngModel]="sessionNote()"
+            (ngModelChange)="onSessionNoteChange($event)"
+            (blur)="flushNotes()"
+            [ngModelOptions]="{ standalone: true }"></textarea>
+        </div>
+      }
+    } @else if (!loading()) {
+      <div class="detail-empty">
+        <p>Select a session to play it back.</p>
+      </div>
+    }
+  </div>
+</div>

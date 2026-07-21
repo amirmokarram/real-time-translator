@@ -5,6 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: d1468163-6e3b-4140-8e02-a0b3d8eb0ee3
+  modified: 2026-07-21T16:59:58.378Z
 ---
 
 Real-time system-audio desktop translator built with Angular 21 + Electron 42. **Language pair is fully user-configurable** (Settings → Languages; added 2026-06-26) — any supported source→target pair from a curated catalog (no fixed English→Persian framing as of 2026-07-17).
@@ -43,6 +44,8 @@ Real-time system-audio desktop translator built with Angular 21 + Electron 42. *
 | Overlay | `features/overlay/` | `overlay-window.ts` (`OverlayManager`) | separate transparent window at `#/overlay`; subscribes to broadcast events |
 | Export | `core/services/export.service.ts` | `export:save` handler | native save dialog (`dialog.showSaveDialog`) |
 | Settings | `core/services/settings.service.ts` | `settings-store.ts` | JSON in `userData/`; signals in renderer |
+| Recording | `core/services/recording.service.ts` | `recording-store.ts` + `recording:*` handlers | renderer owns the MediaRecorder + mixer (browser APIs), main owns the files; chunks streamed every 5 s |
+| Review | `features/review/` | `recording:list`/`save-notes`/`reveal`/`delete` + the **`rec://` protocol** | past sessions play over a custom scheme (CSP refuses `file://`); `stream: true` gives range requests for seeking |
 
 **Broadcast pattern:** translation events (`translation:source` / `:chunk` / `:complete`) are sent to ALL windows via `BrowserWindow.getAllWindows()` so the overlay mirrors the main window with zero extra translation cost.
 

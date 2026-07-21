@@ -163,6 +163,32 @@
   word-break: break-word;
 }
 
+// Recording indicator in the controls bar. Reuses the LIVE badge's red so the two
+// read as the same family, with a steady (not pulsing) dot — the elapsed timer is
+// already doing the "still running" job.
+.rec-badge {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(220, 53, 69, 0.15);
+  color: #e74c3c;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  cursor: help;
+}
+
+.rec-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #e74c3c;
+}
+
 // Session recognition-quality readout in the controls bar. Muted by default so it
 // reads as instrumentation, tinted only once lines have actually been flagged.
 .stt-quality {

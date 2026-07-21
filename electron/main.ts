@@ -1,6 +1,8 @@
-import { app, BrowserWindow, ipcMain, session, shell } from 'electron';
+import { app, BrowserWindow, ipcMain, net, protocol, session, shell } from 'electron';
 import * as path from 'path';
+import { pathToFileURL } from 'url';
 import { registerIpcHandlers } from './ipc-handlers';
+import { resolveSessionFile } from './recording-store';
 import { SettingsStore } from './settings-store';
 import { OverlayManager } from './overlay-window';
 import { AudioCapture } from './audio-capture';
@@ -21,6 +23,17 @@ if (isDev) {
   app.commandLine.appendSwitch('disable-http-cache');
   app.commandLine.appendSwitch('disable-gpu-shader-disk-cache');
 }
+
+// Session recordings are served to the Review player over their own scheme
+// instead of file://, which the renderer's CSP refuses. `stream: true` is what
+// makes range requests work, and range requests are what make seeking inside a
+// 50 MB meeting instant rather than a full download. Must run before app ready.
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: 'rec',
+    privileges: { standard: true, secure: true, stream: true, supportFetchAPI: true },
+  },
+]);
 
 let mainWindow: BrowserWindow | null = null;
 // True once a real quit is underway (tray Quit / OS shutdown both fire
@@ -142,12 +155,27 @@ app.whenReady().then(async () => {
           ...details.responseHeaders,
           'Content-Security-Policy': [
             // ws://localhost:* / http://localhost:* allow a local Whisper (WhisperLive) STT server on any port.
-            "default-src 'self' http://localhost:4200; script-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:4200; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; connect-src 'self' https: wss: ws://localhost:* http://localhost:*",
+            // media-src rec: lets the Review player load session recordings (see
+            // the rec:// protocol handler below) — file:// would be refused here.
+            "default-src 'self' http://localhost:4200; script-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:4200; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; media-src 'self' rec:; connect-src 'self' https: wss: ws://localhost:* http://localhost:*",
           ],
         },
       });
     });
   }
+
+  // rec://session/<basename> → the recording of that name, and nothing else.
+  // The basename comes from the renderer, so resolveSessionFile refuses anything
+  // that resolves outside the recordings folder.
+  protocol.handle('rec', async (request) => {
+    const file = decodeURIComponent(new URL(request.url).pathname).replace(/^\//, '');
+    const resolved = resolveSessionFile(settingsStore.get().recording.folderPath, file);
+    if (!resolved) return new Response('Not found', { status: 404 });
+
+    // net.fetch on a file:// URL honours the Range header, so the player can seek
+    // without pulling the whole meeting down first.
+    return net.fetch(pathToFileURL(resolved).toString(), { headers: request.headers });
+  });
 
   createMainWindow();
   if (!isE2E) trayManager.create();

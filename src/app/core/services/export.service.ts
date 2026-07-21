@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { TranslationEntry } from '../models/app.models';
 import { languageByCode } from '../models/languages';
 import { ElectronBridgeService } from './electron-bridge.service';
+import { RecordingService } from './recording.service';
 import { SettingsService } from './settings.service';
 
 export type ExportFormat = 'txt' | 'srt';
@@ -10,6 +11,7 @@ export type ExportFormat = 'txt' | 'srt';
 export class ExportService {
   private bridge = inject(ElectronBridgeService);
   private settings = inject(SettingsService);
+  private recording = inject(RecordingService);
 
   async export(entries: TranslationEntry[], format: ExportFormat): Promise<{ saved: boolean; path?: string }> {
     if (entries.length === 0) return { saved: false };
@@ -47,14 +49,25 @@ export class ExportService {
   // ── SRT subtitles ──────────────────────────────────────────────────────────────
 
   private toSrt(entries: TranslationEntry[]): string {
-    const start0 = this.asDate(entries[0].timestamp).getTime();
+    // Zero on the recording when there is one, so the subtitles drop straight onto
+    // the audio file in a player. Without a recording there is nothing to sync to,
+    // so the first line becomes 00:00 as before.
+    const session = this.recording.lastSession();
+    const start0 = session
+      ? session.startedAt
+      : this.asDate(entries[0].timestamp).getTime();
     const blocks: string[] = [];
 
+    // Speech-start time is what lines up with audio; timestamp (translation
+    // completed) trails it by a second or more. Typed rows only have the latter.
+    const cueTime = (e: TranslationEntry): number =>
+      e.startedAt ?? this.asDate(e.timestamp).getTime();
+
     entries.forEach((e, i) => {
-      const startMs = this.asDate(e.timestamp).getTime() - start0;
+      const startMs = Math.max(0, cueTime(e) - start0);
       const rawNext =
         i < entries.length - 1
-          ? this.asDate(entries[i + 1].timestamp).getTime() - start0
+          ? Math.max(0, cueTime(entries[i + 1]) - start0)
           : startMs + 4000;
       const endMs = Math.max(rawNext, startMs + 1500); // ensure visible duration
 

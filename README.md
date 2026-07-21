@@ -19,7 +19,9 @@ Built with Angular 21 + Electron 42. Dark theme; right-to-left languages (Persia
 - **7 switchable translation providers** — Claude, Google, DeepL, Microsoft, OpenAI, LibreTranslate, Ollama (local, e.g. TranslateGemma).
 - **Live dual-pane display** — chat-style history with synced source/translation rows, auto-scroll, per-row copy.
 - **Overlay mode** — a floating, always-on-top, click-through subtitle window for use over other apps.
-- **History export** — save the transcript as `.txt` or `.srt` subtitles.
+- **History export** — save the transcript as `.txt` or `.srt` subtitles. When a session was recorded, the `.srt` is timed against the recording, so subtitles and audio line up in any player.
+- **Session recording** — each capture session is saved to disk as an audio file, so you can go back and hear what was actually said. Optionally mixes in your microphone, so a meeting captures both sides — the mix is recording-only and never reaches speech recognition, so your own voice is not transcribed. What to record, which mic, mic balance, audio quality and destination folder are all configurable (Settings → Recording), and a failed recording never interrupts live translation.
+- **Review past sessions** — a **Review** tab lists your recordings and plays them back with the transcript beside them: click any line to jump to that moment in the audio. Take **notes** on the whole session or pinned to individual lines, and hand a whole meeting — or a single line — to the assistant to summarize or explain. Notes live alongside the transcript in one file per session.
 - **Assist mode (LLM Q&A)** — select transcript rows and **Ask**, or open a free-form chat:
   - Tuned by default as an **interview assistant** — explains what's being asked and gives a natural, ready-to-speak answer in simple English.
   - **4 assist providers:** Claude, OpenAI, and two local/offline options — **Ollama** and any **OpenAI-compatible server** (Docker Model Runner, LM Studio, vLLM, llama.cpp, LocalAI).

@@ -33,6 +33,14 @@
   },
   "prompts": { "assist": "", "translation": "", "interviewAnswer": "", "interviewAnswerFile": "" },
   "audio": { "selectedSourceId": null },
+  "recording": {
+    "enabled": true,
+    "folderPath": "",
+    "mode": "mix",
+    "micDeviceId": "",
+    "micGain": 100,
+    "bitrateKbps": 64
+  },
   "questionBank": { "folderPath": "", "maxResults": 3 },
   "display": { "fontSize": 16, "showInterimResults": true, "historyLength": 50 },
   "tray": { "closeToTray": true },

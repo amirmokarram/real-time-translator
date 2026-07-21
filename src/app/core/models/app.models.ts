@@ -58,6 +58,64 @@ export interface AudioSource {
   thumbnail?: string; // optional — microphones have no thumbnail
 }
 
+// ── Session recording ─────────────────────────────────────────────────────────
+
+// Which input a recorded chunk belongs to. 'main' is the captured source; 'mic'
+// only exists in 'separate' mode, where the microphone gets its own file.
+export type RecordingTrack = 'main' | 'mic';
+
+export interface RecordingStartResult {
+  paths: Partial<Record<RecordingTrack, string>>;
+}
+
+export interface RecordingStopResult {
+  files: { track: RecordingTrack; path: string; bytes: number }[];
+}
+
+/**
+ * The transcript sidecar written next to a session's audio. Offsets are relative
+ * to the start of the recording, so a player can seek straight to a line without
+ * knowing anything about wall-clock time.
+ */
+export interface SessionTranscript {
+  startedAt: string;   // ISO timestamp of the recording start
+  durationMs: number;  // wall-clock length — the WebM header has no usable duration
+  languages: { source: string; target: string };
+  entries: SessionTranscriptEntry[];
+  // Written back into the sidecar after the fact, while reviewing. Absent until
+  // the first note is saved.
+  notes?: SessionNotes;
+}
+
+/**
+ * Notes taken while reviewing a session. Line notes are keyed by the transcript
+ * entry's `offsetMs` rather than its index: the offset is what the note is really
+ * about (a moment in the audio), and it stays meaningful on its own.
+ */
+export interface SessionNotes {
+  session?: string;
+  lines?: { offsetMs: number; text: string }[];
+}
+
+export interface SessionTranscriptEntry {
+  offsetMs: number;
+  source: string;
+  target: string;
+  provider: string;
+  confidence?: number;
+}
+
+/** One past session as listed by the Review view. */
+export interface RecordingSession {
+  file: string;   // basename — also the id the rec:// protocol serves
+  path: string;   // absolute, shown as a tooltip and used for reveal/delete
+  sizeBytes: number;
+  modifiedAt: string;
+  // Absent when a session was interrupted before its sidecar was written: the
+  // audio is still playable, just not navigable.
+  transcript: SessionTranscript | null;
+}
+
 // ── Translation ───────────────────────────────────────────────────────────────
 
 export interface TranslationEntry {
@@ -69,6 +127,12 @@ export interface TranslationEntry {
   timestamp: Date;
   /** STT confidence (0–1) for `source`; absent for typed input or backends that don't report one. */
   confidence?: number;
+  /**
+   * Epoch ms when the speech began, as opposed to `timestamp`, which is when the
+   * translation came back — a second or more later. This is what a recording is
+   * seeked by. Absent for typed input.
+   */
+  startedAt?: number;
 }
 
 export interface TranslationResult {
@@ -112,6 +176,19 @@ export interface ElectronAPI {
   getAvailableProviders(): Promise<ProviderMeta[]>;
   // Export
   exportFile(payload: { content: string; defaultName: string }): Promise<{ saved: boolean; path?: string }>;
+  // Session recording
+  recordingStart(payload: { tracks: RecordingTrack[] }): Promise<RecordingStartResult>;
+  recordingChunk(payload: { track: RecordingTrack; chunk: Uint8Array }): Promise<void>;
+  recordingStop(): Promise<RecordingStopResult>;
+  recordingSaveTranscript(payload: { content: string }): Promise<{ path: string | null }>;
+  recordingPickFolder(): Promise<{ path: string | null }>;
+  recordingList(): Promise<RecordingSession[]>;
+  recordingSaveNotes(payload: {
+    file: string;
+    notes: SessionNotes;
+  }): Promise<{ saved: boolean; error?: string }>;
+  recordingReveal(payload: { file: string }): Promise<void>;
+  recordingDelete(payload: { file: string }): Promise<{ deleted: boolean; error?: string }>;
   // Overlay window
   toggleOverlay(): Promise<boolean>;
   isOverlayOpen(): Promise<boolean>;

@@ -9,6 +9,7 @@ import { PendingSentence, TranscriptionService } from '../../core/services/trans
 import { SettingsService } from '../../core/services/settings.service';
 import { ExportService, ExportFormat } from '../../core/services/export.service';
 import { AssistService } from '../../core/services/assist.service';
+import { RecordingService } from '../../core/services/recording.service';
 import { TranslationEntry } from '../../core/models/app.models';
 import { Language, languageByCode } from '../../core/models/languages';
 
@@ -25,6 +26,7 @@ export class TranslatorComponent implements OnInit, OnDestroy {
   protected transcription = inject(TranscriptionService);
   protected settings = inject(SettingsService);
   protected assist = inject(AssistService);
+  protected recording = inject(RecordingService);
   private exportSvc = inject(ExportService);
 
   protected inputText = '';
@@ -43,6 +45,10 @@ export class TranslatorComponent implements OnInit, OnDestroy {
   // order without overlapping calls — never via the manual input box.
   private sttQueue: PendingSentence[] = [];
   private draining = false;
+  private drainPromise: Promise<void> = Promise.resolve();
+  // Previous value of audio.isCapturing(), so the effect below can spot the
+  // true→false edge rather than firing on every read.
+  private wasCapturing = false;
 
   // Live partial translation (Phase B): debounce-translate the in-progress
   // English so the reader can follow along before the sentence finalizes.
@@ -70,6 +76,18 @@ export class TranslatorComponent implements OnInit, OnDestroy {
     effect(() => {
       const interim = this.transcription.interimText();
       untracked(() => this.schedulePartial(interim));
+    });
+
+    // Capture stopped → the session is over, file its transcript. Watching the
+    // flag rather than doing this in toggleCapture() covers the tray menu and the
+    // global hotkey too: both stop capture through CommandService, and would
+    // otherwise leave a recording with no sidecar next to it.
+    effect(() => {
+      const capturing = this.audio.isCapturing();
+      untracked(() => {
+        if (this.wasCapturing && !capturing) void this.finishSession();
+        this.wasCapturing = capturing;
+      });
     });
 
     // Scroll to bottom after DOM renders the new history row
@@ -101,12 +119,17 @@ export class TranslatorComponent implements OnInit, OnDestroy {
     await this.runTranslation(text);
   }
 
-  // Core runner — shared by manual input and audio STT. `confidence` is only ever
-  // present for recognized speech; text typed by hand has nothing to be unsure of.
-  private async runTranslation(text: string, confidence?: number): Promise<void> {
+  // Core runner — shared by manual input and audio STT. `confidence` and
+  // `startedAt` are only ever present for recognized speech: typed text has
+  // nothing to be unsure of and no position in a recording.
+  private async runTranslation(
+    text: string,
+    confidence?: number,
+    startedAt?: number
+  ): Promise<void> {
     this.error.set(null);
     try {
-      await this.translation.translate(text, confidence);
+      await this.translation.translate(text, confidence, startedAt);
     } catch (err: unknown) {
       this.error.set(err instanceof Error ? err.message : 'Translation failed');
     }
@@ -135,17 +158,31 @@ export class TranslatorComponent implements OnInit, OnDestroy {
   }
 
   // Translate queued STT sentences sequentially → one history row each, in order.
-  private async drainSttQueue(): Promise<void> {
-    if (this.draining) return;
-    this.draining = true;
-    try {
-      while (this.sttQueue.length > 0) {
-        const next = this.sttQueue.shift()!;
-        await this.runTranslation(next.text, next.confidence);
-      }
-    } finally {
-      this.draining = false;
+  // Returns the in-flight drain when one is already running, so a caller can wait
+  // for the queue to be empty regardless of who started it.
+  private drainSttQueue(): Promise<void> {
+    if (!this.draining) {
+      this.draining = true;
+      this.drainPromise = this.runDrain().finally(() => { this.draining = false; });
     }
+    return this.drainPromise;
+  }
+
+  private async runDrain(): Promise<void> {
+    while (this.sttQueue.length > 0) {
+      const next = this.sttQueue.shift()!;
+      await this.runTranslation(next.text, next.confidence, next.startedAt);
+    }
+  }
+
+  // Recording length as m:ss (or h:mm:ss once a meeting runs past the hour).
+  protected recElapsed(): string {
+    const total = Math.floor(this.recording.elapsedMs() / 1000);
+    const p = (n: number): string => String(n).padStart(2, '0');
+    const h = Math.floor(total / 3600);
+    const m = Math.floor((total % 3600) / 60);
+    const s = total % 60;
+    return h > 0 ? `${h}:${p(m)}:${p(s)}` : `${m}:${p(s)}`;
   }
 
   // Compact session readout, e.g. "STT 96%" or "STT 91% · 3 low". Empty until the
@@ -264,6 +301,17 @@ export class TranslatorComponent implements OnInit, OnDestroy {
     } else {
       await this.audio.startCapture();
     }
+  }
+
+  // Stopping capture flushes the last buffered sentence, which still has to be
+  // translated before the transcript is complete. Drain it here rather than
+  // waiting on the effect (which runs on Angular's schedule, not ours), then file
+  // the sidecar next to the audio. No-op when nothing was recorded.
+  private async finishSession(): Promise<void> {
+    const tail = this.transcription.takePending();
+    if (tail.length > 0) this.sttQueue.push(...tail);
+    await this.drainSttQueue();
+    await this.recording.saveTranscript(this.translation.history());
   }
 
   // Live panel: show interim while speaking, last final between sentences

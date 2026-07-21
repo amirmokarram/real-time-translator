@@ -40,6 +40,18 @@ const electronAPI = {
   // Export
   exportFile: (payload: unknown) => ipcRenderer.invoke('export:save', payload),
 
+  // Session recording — renderer owns the MediaRecorder, main owns the files
+  recordingStart: (payload: unknown) => ipcRenderer.invoke('recording:start', payload),
+  recordingChunk: (payload: unknown) => ipcRenderer.invoke('recording:chunk', payload),
+  recordingStop: () => ipcRenderer.invoke('recording:stop'),
+  recordingSaveTranscript: (payload: unknown) =>
+    ipcRenderer.invoke('recording:save-transcript', payload),
+  recordingPickFolder: () => ipcRenderer.invoke('recording:pick-folder'),
+  recordingList: () => ipcRenderer.invoke('recording:list'),
+  recordingSaveNotes: (payload: unknown) => ipcRenderer.invoke('recording:save-notes', payload),
+  recordingReveal: (payload: unknown) => ipcRenderer.invoke('recording:reveal', payload),
+  recordingDelete: (payload: unknown) => ipcRenderer.invoke('recording:delete', payload),
+
   // Overlay window
   toggleOverlay: () => ipcRenderer.invoke('overlay:toggle'),
   isOverlayOpen: () => ipcRenderer.invoke('overlay:is-open'),

@@ -1,4 +1,4 @@
-import { IpcMain, BrowserWindow, IpcMainInvokeEvent, dialog } from 'electron';
+import { IpcMain, BrowserWindow, IpcMainInvokeEvent, dialog, shell } from 'electron';
 import * as fs from 'fs/promises';
 import { SettingsStore } from './settings-store';
 import { AudioCapture } from './audio-capture';
@@ -17,6 +17,13 @@ import {
 } from './prompts';
 import { languageName } from './languages';
 import { QuestionBank } from './question-bank/question-bank';
+import {
+  RecordingStore,
+  RecordingTrack,
+  listSessions,
+  resolveSessionFile,
+  saveNotes,
+} from './recording-store';
 import { BankMatch } from './question-bank/matcher';
 import {
   ROUTER_SYSTEM_PROMPT,
@@ -53,6 +60,7 @@ export function registerIpcHandlers(
   toggleAlwaysOnTop: () => Promise<boolean>
 ): void {
   const questionBank = new QuestionBank(settingsStore);
+  const recordingStore = new RecordingStore();
 
   // Send an event to every open window (main + overlay)
   const broadcast = (channel: string, ...args: unknown[]): void => {
@@ -284,6 +292,16 @@ export function registerIpcHandlers(
     return { path: result.filePaths[0] };
   });
 
+  // Native folder picker for the Settings → Recording "Save recordings to" row.
+  ipcMain.handle('recording:pick-folder', async () => {
+    const result = await dialog.showOpenDialog(win, {
+      title: 'Choose where to save session recordings',
+      properties: ['openDirectory', 'createDirectory'],
+    });
+    if (result.canceled || result.filePaths.length === 0) return { path: null };
+    return { path: result.filePaths[0] };
+  });
+
   // ── Default system prompts (for the Settings editor + Reset) ─────────────────
   // The translation default carries ${SOURCE}/${TARGET} tokens (resolved to the
   // configured language names at call time), so it's language-independent and the
@@ -319,6 +337,64 @@ export function registerIpcHandlers(
     if (result.canceled || !result.filePath) return { saved: false };
     await fs.writeFile(result.filePath, content, 'utf-8');
     return { saved: true, path: result.filePath };
+  });
+
+  // ── Session audio recording ─────────────────────────────────────────────────
+  // The renderer owns the MediaRecorder (getUserMedia and the mixer are browser
+  // APIs); main owns the files. Chunks arrive via invoke so awaiting each write
+  // serializes them and gives the renderer backpressure.
+  ipcMain.handle('recording:start', async (_event, payload: unknown) => {
+    const { tracks } = payload as { tracks: RecordingTrack[] };
+    const folderPath = settingsStore.get().recording.folderPath;
+    return recordingStore.start(folderPath, tracks);
+  });
+
+  ipcMain.handle('recording:chunk', async (_event, payload: unknown) => {
+    const { track, chunk } = payload as { track: RecordingTrack; chunk: Uint8Array };
+    await recordingStore.write(track, chunk);
+  });
+
+  ipcMain.handle('recording:stop', () => recordingStore.stop());
+
+  // Filed after the audio is closed: the last sentence of a meeting is only
+  // translated once capture has already stopped.
+  ipcMain.handle('recording:save-transcript', async (_event, payload: unknown) => {
+    const { content } = payload as { content: string };
+    return recordingStore.saveTranscript(content);
+  });
+
+  // ── Reviewing past sessions ─────────────────────────────────────────────────
+  ipcMain.handle('recording:list', () =>
+    listSessions(settingsStore.get().recording.folderPath)
+  );
+
+  ipcMain.handle('recording:save-notes', (_event, payload: unknown) => {
+    const { file, notes } = payload as { file: string; notes: unknown };
+    return saveNotes(settingsStore.get().recording.folderPath, file, notes);
+  });
+
+  ipcMain.handle('recording:reveal', (_event, payload: unknown) => {
+    const { file } = payload as { file: string };
+    const resolved = resolveSessionFile(settingsStore.get().recording.folderPath, file);
+    if (resolved) shell.showItemInFolder(resolved);
+  });
+
+  // Recordings go to the OS trash, not unlink: a meeting is not something to lose
+  // to a misclick, and the Recycle Bin is a better undo than anything we'd build.
+  ipcMain.handle('recording:delete', async (_event, payload: unknown) => {
+    const { file } = payload as { file: string };
+    const folderPath = settingsStore.get().recording.folderPath;
+    const audio = resolveSessionFile(folderPath, file);
+    if (!audio) return { deleted: false };
+
+    const sidecar = audio.replace(/\.webm$/, '') + '.json';
+    try {
+      await shell.trashItem(audio);
+      await shell.trashItem(sidecar).catch(() => {}); // may not exist
+      return { deleted: true };
+    } catch (err: unknown) {
+      return { deleted: false, error: err instanceof Error ? err.message : String(err) };
+    }
   });
 
   // ── Overlay window ──────────────────────────────────────────────────────────
