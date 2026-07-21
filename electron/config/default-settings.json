@@ -18,6 +18,7 @@
     "deepgramModel": "nova-3",
     "useVad": true,
     "keyterms": "",
+    "audioBitrateKbps": 32,
     "endpointingMs": 800,
     "utteranceEndMs": 1000,
     "sentenceMaxWaitMs": 4000,

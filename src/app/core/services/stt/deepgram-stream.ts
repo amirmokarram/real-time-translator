@@ -22,6 +22,12 @@ export class DeepGramStream implements ISttStream {
   private active = false;
   private opened = false; // true once the first connection has succeeded
 
+  // Fallback Opus bitrate (kbps) when settings don't supply one. The original
+  // 16 kbps is aggressively compressed even for speech and throws away detail the
+  // recognizer could have used; 32 kbps is effectively transparent for mono voice
+  // and costs ~2 KB/s more upstream. User-tunable via Settings → Speech Recognition.
+  private static readonly DEFAULT_AUDIO_BITRATE_KBPS = 32;
+
   start(stream: MediaStream, opts: SttStartOptions, cb: SttCallbacks): Promise<void> {
     this.stream = stream;
     this.opts = opts;
@@ -67,6 +73,10 @@ export class DeepGramStream implements ISttStream {
         // speech_final never fired. DeepGram's API floor for this value is 1000ms.
         utterance_end_ms: String(Math.max(1000, this.opts.utteranceEndMs ?? 1000)),
         vad_events: 'true',
+        // Spoken numbers → digits ("twenty twenty six" → "2026"). Meetings are full
+        // of versions, dates and counts, and digits survive translation better than
+        // spelled-out numerals. Supported on Nova-3 and Nova-2.
+        numerals: 'true',
       });
 
       // Custom-vocabulary biasing. The parameter name is model-specific: Nova-3
@@ -120,11 +130,13 @@ export class DeepGramStream implements ISttStream {
           }
           if (msg.type !== 'Results') return;
 
-          const transcript = msg.channel?.alternatives?.[0]?.transcript?.trim() ?? '';
+          const alt = msg.channel?.alternatives?.[0];
+          const transcript = alt?.transcript?.trim() ?? '';
 
           if (msg.is_final) {
             // Finalized fragment (+ whether DeepGram detected end-of-speech).
-            this.cb.final(transcript, !!msg.speech_final);
+            // The confidence rides along so the UI can flag shaky recognition.
+            this.cb.final(transcript, !!msg.speech_final, alt?.confidence);
           } else if (transcript) {
             // Interim word(s): live tail for the panel.
             this.cb.interim(transcript);
@@ -138,9 +150,10 @@ export class DeepGramStream implements ISttStream {
     const mimeType = this.pickMimeType();
 
     try {
+      const kbps = this.opts.audioBitrateKbps || DeepGramStream.DEFAULT_AUDIO_BITRATE_KBPS;
       this.mediaRecorder = new MediaRecorder(stream, {
         mimeType,
-        audioBitsPerSecond: 16000,
+        audioBitsPerSecond: kbps * 1000,
       });
     } catch {
       // Fallback if preferred type not accepted

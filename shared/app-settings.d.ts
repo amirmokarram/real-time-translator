@@ -37,6 +37,10 @@ export interface AppSettings {
     // toward. Newline/comma separated. DeepGram sends it as keyterm (Nova-3) or
     // keywords (Nova-2); shared field so it survives an engine switch.
     keyterms: string;
+    // DeepGram only: Opus bitrate (kbps) for the audio we upload. Higher = more
+    // detail for the recognizer at more upstream bandwidth. 16 was the original
+    // value and is noticeably lossy for speech; 32 is effectively transparent.
+    audioBitrateKbps: number;
     // ── Latency tuning (lower = snappier, but more fragmented/less accurate) ──
     endpointingMs: number;     // DeepGram only: silence (ms) before a fragment is finalized
     utteranceEndMs: number;    // DeepGram only: end-of-utterance backstop (ms); API floor is 1000

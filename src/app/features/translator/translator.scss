@@ -163,6 +163,31 @@
   word-break: break-word;
 }
 
+// Session recognition-quality readout in the controls bar. Muted by default so it
+// reads as instrumentation, tinted only once lines have actually been flagged.
+.stt-quality {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+  opacity: 0.75;
+  white-space: nowrap;
+  cursor: help;
+
+  &.poor {
+    color: var(--warning, #d9a441);
+    opacity: 1;
+  }
+}
+
+// The recognizer was unsure about this line. Deliberately faint — it's a hint to
+// glance at the row (and mine it for custom-vocabulary terms), not an error state.
+.hcell-text.low-confidence {
+  text-decoration: underline dotted;
+  text-decoration-color: var(--warning, #d9a441);
+  text-underline-offset: 3px;
+  cursor: help;
+}
+
 // Target-language text styling (color/size) — direction-agnostic. The script
 // direction + font are applied separately via .rtl-text so any language pair works.
 .target-text {

@@ -20,7 +20,9 @@ export class TranslationService {
 
   private unsubChunk: (() => void) | null = null;
 
-  async translate(englishText: string): Promise<TranslationResult> {
+  // `confidence` is the STT backend's certainty in `englishText` (absent for typed
+  // input). Carried onto the entry purely so the UI can flag a shaky row.
+  async translate(englishText: string, confidence?: number): Promise<TranslationResult> {
     if (!englishText.trim()) throw new Error('Empty input');
 
     this.isTranslating.set(true);
@@ -46,6 +48,7 @@ export class TranslationService {
         provider: result.provider,
         processingTimeMs: result.processingTimeMs,
         timestamp: new Date(),
+        confidence,
       };
 
       // Add newest at the END so history scrolls upward naturally

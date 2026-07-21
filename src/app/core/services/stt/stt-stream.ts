@@ -9,13 +9,18 @@ export interface SttStartOptions {
   model?: string;     // model name: Whisper size/name, or DeepGram model ('nova-3'/'nova-2')
   useVad?: boolean;   // Whisper — server-side voice-activity gating
   keyterms?: string[]; // custom vocabulary to bias recognition (names, jargon, acronyms)
+  audioBitrateKbps?: number; // DeepGram — Opus upload bitrate; higher = more detail for the recognizer
   endpointingMs?: number;  // DeepGram — silence (ms) before a fragment is finalized
   utteranceEndMs?: number; // DeepGram — end-of-utterance backstop (ms); API floor is 1000
 }
 
 export interface SttCallbacks {
-  /** A chunk of finalized text. `endOfUtterance` = the speaker paused (close the utterance). */
-  final(text: string, endOfUtterance: boolean): void;
+  /**
+   * A chunk of finalized text. `endOfUtterance` = the speaker paused (close the
+   * utterance). `confidence` (0–1) is the backend's own certainty, when it reports
+   * one — used to flag shaky recognition, not to gate anything.
+   */
+  final(text: string, endOfUtterance: boolean, confidence?: number): void;
   /** Current in-flight (not yet final) words, for the live panel. */
   interim(text: string): void;
   /** Utterance ended with no accompanying text (silence backstop). */

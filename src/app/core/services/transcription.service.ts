@@ -5,6 +5,12 @@ import { DeepGramStream } from './stt/deepgram-stream';
 import { WhisperStream } from './stt/whisper-stream';
 import { MockSttStream } from './stt/mock-stream';
 
+/** One committed sentence, plus the backend's confidence in it when reported. */
+export interface PendingSentence {
+  text: string;
+  confidence?: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class TranscriptionService {
   private settings = inject(SettingsService);
@@ -18,13 +24,30 @@ export class TranscriptionService {
   // drains takePending(); using a queue (not the value of lastFinalText) means
   // a burst of sentences committed in one tick is never lost to signal coalescing.
   readonly finalVersion = signal(0);
-  private pendingSentences: string[] = [];
+  private pendingSentences: PendingSentence[] = [];
 
-  takePending(): string[] {
+  takePending(): PendingSentence[] {
     const out = this.pendingSentences;
     this.pendingSentences = [];
     return out;
   }
+
+  // ── Recognition-quality stats (per capture session) ──────────────────────────
+  // Diagnostic only: nothing is gated on these. They exist so a change to the STT
+  // config (model, bitrate, custom vocabulary) can be judged against a number
+  // rather than a vibe. Comparable only within one backend — confidence scales
+  // differ between models.
+  readonly avgConfidence = signal<number | null>(null);
+  readonly lowConfidenceCount = signal(0);
+  private confidenceSum = 0;
+  private confidenceCount = 0;
+  /** Below this, a sentence is worth eyeballing (and its odd words worth adding to custom vocabulary). */
+  static readonly LOW_CONFIDENCE = 0.85;
+
+  // Worst confidence seen among the fragments currently sitting in `pendingFinal`.
+  // Fragments don't map cleanly onto sentences after segmentation, so we attach
+  // the worst-case value — a sentence is only as trustworthy as its shakiest part.
+  private bufferConfidence: number | null = null;
 
   // The active streaming backend (DeepGram today; Whisper added in Phase C).
   private stream: ISttStream | null = null;
@@ -74,8 +97,12 @@ export class TranscriptionService {
   // Semantic events from whichever backend is streaming. The protocol-specific
   // parsing lives in the strategy; here we only do sentence segmentation.
   private readonly callbacks: SttCallbacks = {
-    final: (text, endOfUtterance) => {
+    final: (text, endOfUtterance, confidence) => {
       if (text) {
+        if (confidence !== undefined) {
+          this.bufferConfidence =
+            this.bufferConfidence === null ? confidence : Math.min(this.bufferConfidence, confidence);
+        }
         this.pendingFinal = `${this.pendingFinal} ${text}`.trim();
         this.drainSentences();
       }
@@ -97,6 +124,14 @@ export class TranscriptionService {
     // narrows it as needed). Falls back to English if settings aren't loaded.
     const lang = appSettings?.languages.source ?? 'en';
     this.error.set(null);
+
+    // Fresh quality stats per capture session, so an A/B of STT settings compares
+    // like with like instead of averaging across the previous configuration.
+    this.avgConfidence.set(null);
+    this.lowConfidenceCount.set(0);
+    this.confidenceSum = 0;
+    this.confidenceCount = 0;
+    this.bufferConfidence = null;
 
     // Apply latency-tuning knobs for this session.
     this.sentenceMaxWaitMs = stt?.sentenceMaxWaitMs ?? 4000;
@@ -132,6 +167,7 @@ export class TranscriptionService {
           apiKey,
           model: stt?.deepgramModel,
           keyterms: TranscriptionService.parseKeyterms(stt?.keyterms),
+          audioBitrateKbps: stt?.audioBitrateKbps,
           endpointingMs: stt?.endpointingMs,
           utteranceEndMs: stt?.utteranceEndMs,
         },
@@ -197,9 +233,22 @@ export class TranscriptionService {
 
   // Queue a finished sentence for the consumer and update the display fallback.
   private emitSentence(sentence: string): void {
-    this.pendingSentences.push(sentence);
+    const confidence = this.bufferConfidence ?? undefined;
+    this.pendingSentences.push({ text: sentence, confidence });
     this.lastFinalText.set(sentence);
     this.finalVersion.update((v) => v + 1);
+
+    if (confidence !== undefined) {
+      this.confidenceSum += confidence;
+      this.confidenceCount += 1;
+      this.avgConfidence.set(this.confidenceSum / this.confidenceCount);
+      if (confidence < TranscriptionService.LOW_CONFIDENCE) {
+        this.lowConfidenceCount.update((n) => n + 1);
+      }
+    }
+
+    // Buffer drained → the next sentence starts its own confidence window.
+    if (!this.pendingFinal.trim()) this.bufferConfidence = null;
   }
 
   private endsSentence(text: string): boolean {

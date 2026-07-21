@@ -585,6 +585,25 @@
                   mishearing in your meetings. Sent as {{ sttDeepgramModel() === 'nova-2' ? 'keywords' : 'keyterm prompting' }}.
                 </p>
               </div>
+
+              <div class="field-group">
+                <label class="field-label">Audio quality</label>
+                <select
+                  class="field-select"
+                  [ngModel]="sttAudioBitrateKbps()"
+                  (ngModelChange)="sttAudioBitrateKbps.set(+$event)"
+                  [ngModelOptions]="{ standalone: true }">
+                  <option [ngValue]="16">16 kbps — lowest bandwidth</option>
+                  <option [ngValue]="24">24 kbps</option>
+                  <option [ngValue]="32">32 kbps — recommended</option>
+                  <option [ngValue]="48">48 kbps — highest quality</option>
+                </select>
+                <p class="field-hint">
+                  Bitrate of the audio uploaded to DeepGram. Higher gives the recognizer more to work
+                  with; <strong>32</strong> is effectively transparent for speech. Compare settings using
+                  the <strong>STT %</strong> readout next to the capture button — but only within the same model.
+                </p>
+              </div>
             } @else {
               <!-- Whisper (local, WhisperLive) -->
               <div class="field-group">

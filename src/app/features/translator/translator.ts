@@ -5,7 +5,7 @@ import {
 import { FormsModule } from '@angular/forms';
 import { TranslationService } from '../../core/services/translation.service';
 import { AudioService } from '../../core/services/audio.service';
-import { TranscriptionService } from '../../core/services/transcription.service';
+import { PendingSentence, TranscriptionService } from '../../core/services/transcription.service';
 import { SettingsService } from '../../core/services/settings.service';
 import { ExportService, ExportFormat } from '../../core/services/export.service';
 import { AssistService } from '../../core/services/assist.service';
@@ -41,7 +41,7 @@ export class TranslatorComponent implements OnInit, OnDestroy {
   // FIFO of finalized STT sentences awaiting translation, drained one at a time
   // so a burst (e.g. several sentences from one utterance) is translated in
   // order without overlapping calls — never via the manual input box.
-  private sttQueue: string[] = [];
+  private sttQueue: PendingSentence[] = [];
   private draining = false;
 
   // Live partial translation (Phase B): debounce-translate the in-progress
@@ -101,11 +101,12 @@ export class TranslatorComponent implements OnInit, OnDestroy {
     await this.runTranslation(text);
   }
 
-  // Core runner — shared by manual input and audio STT
-  private async runTranslation(text: string): Promise<void> {
+  // Core runner — shared by manual input and audio STT. `confidence` is only ever
+  // present for recognized speech; text typed by hand has nothing to be unsure of.
+  private async runTranslation(text: string, confidence?: number): Promise<void> {
     this.error.set(null);
     try {
-      await this.translation.translate(text);
+      await this.translation.translate(text, confidence);
     } catch (err: unknown) {
       this.error.set(err instanceof Error ? err.message : 'Translation failed');
     }
@@ -139,11 +140,34 @@ export class TranslatorComponent implements OnInit, OnDestroy {
     this.draining = true;
     try {
       while (this.sttQueue.length > 0) {
-        await this.runTranslation(this.sttQueue.shift()!);
+        const next = this.sttQueue.shift()!;
+        await this.runTranslation(next.text, next.confidence);
       }
     } finally {
       this.draining = false;
     }
+  }
+
+  // Compact session readout, e.g. "STT 96%" or "STT 91% · 3 low". Empty until the
+  // backend has reported a confidence, so it stays invisible for typed-only use
+  // and for backends that don't report one (Whisper).
+  protected sttQualityLabel(): string {
+    const avg = this.transcription.avgConfidence();
+    if (avg === null) return '';
+    const low = this.transcription.lowConfidenceCount();
+    return `STT ${Math.round(avg * 100)}%${low > 0 ? ` · ${low} low` : ''}`;
+  }
+
+  // The recognizer wasn't confident about this row. Flagging it is a diagnostic:
+  // the words it fumbled are exactly the ones worth adding to the custom
+  // vocabulary list in Settings → Speech Recognition.
+  protected isLowConfidence(entry: TranslationEntry): boolean {
+    return entry.confidence !== undefined && entry.confidence < TranscriptionService.LOW_CONFIDENCE;
+  }
+
+  protected confidenceLabel(entry: TranslationEntry): string {
+    if (entry.confidence === undefined) return '';
+    return `Speech recognition confidence: ${Math.round(entry.confidence * 100)}%`;
   }
 
   // Copy a row's source text — handy mid-meeting when there's no time to retype.

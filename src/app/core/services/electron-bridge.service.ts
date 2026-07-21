@@ -23,7 +23,7 @@ const mockSettings: AppSettings = {
   languages: { source: 'en', target: 'fa' },
   stt: {
     provider: 'deepgram', apiKey: '', endpoint: 'ws://localhost:9090', model: 'small',
-    deepgramModel: 'nova-3', useVad: true, keyterms: '',
+    deepgramModel: 'nova-3', useVad: true, keyterms: '', audioBitrateKbps: 32,
     endpointingMs: 800, utteranceEndMs: 1000, sentenceMaxWaitMs: 4000, commitOnClause: false,
     livePartial: false, partialDebounceMs: 600,
   },

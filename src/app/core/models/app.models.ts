@@ -67,6 +67,8 @@ export interface TranslationEntry {
   provider: string;
   processingTimeMs: number;
   timestamp: Date;
+  /** STT confidence (0–1) for `source`; absent for typed input or backends that don't report one. */
+  confidence?: number;
 }
 
 export interface TranslationResult {
