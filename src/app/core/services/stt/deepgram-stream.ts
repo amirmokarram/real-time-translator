@@ -149,13 +149,22 @@ export class DeepGramStream implements ISttStream {
           if (msg.is_final) {
             // Finalized fragment (+ whether DeepGram detected end-of-speech).
             // The confidence rides along so the UI can flag shaky recognition,
-            // and the audio timing so a recording can be seeked to these words.
+            // and the audio timings so each sentence can be seeked to in a
+            // recording — per word, because one fragment often holds several
+            // sentences and they must not all share the fragment's start.
+            const toWall = (seconds: number): number =>
+              this.streamStartWall! + seconds * 1000;
+            const timed = this.streamStartWall !== null;
             const audioStart = alt?.words?.[0]?.start ?? msg.start;
-            const speechStartAt =
-              audioStart !== undefined && this.streamStartWall !== null
-                ? this.streamStartWall + audioStart * 1000
-                : undefined;
-            this.cb.final(transcript, !!msg.speech_final, alt?.confidence, speechStartAt);
+
+            this.cb.final({
+              text: transcript,
+              endOfUtterance: !!msg.speech_final,
+              confidence: alt?.confidence,
+              startedAt: timed && audioStart !== undefined ? toWall(audioStart) : undefined,
+              wordStartedAt:
+                timed && alt?.words?.length ? alt.words.map((w) => toWall(w.start)) : undefined,
+            });
           } else if (transcript) {
             // Interim word(s): live tail for the panel.
             this.cb.interim(transcript);

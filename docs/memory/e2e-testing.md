@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: efb6c1f4-0f8c-44d0-8361-1634d470274d
-  modified: 2026-07-21T21:34:13.427Z
+  modified: 2026-07-21T22:30:11.338Z
 ---
 
 Playwright E2E tests live in `e2e/` and drive the **built** Electron app + real Angular
@@ -71,6 +71,19 @@ compile, so `electron:compile` aborted and the test silently ran against the pre
 navigate-away tests were both confirmed to fail with their fix reverted. Also: a range test that
 stops capture immediately gets a **zero-byte file**, and a range of an empty file proves nothing —
 wait ~1.2 s for a chunk first, as the other recording tests do.
+
+**Known pre-existing flakes (NOT recording-related), both in the prompt-token area:**
+`translation-pipeline.spec.ts` › "resolves ${SOURCE}/${TARGET} tokens…" and `settings.spec.ts` ›
+"a custom prompt with tokens persists verbatim". Both fail intermittently under full-suite load and
+pass on rerun / in isolation. They predate the recording work — leave them unless they are the task,
+but note they may be the same underlying settings-save timing issue and worth one investigation.
+
+**The recording specs' own "notes persist…" flake was a REAL BUG, not a bad test** (2026-07-21):
+`EPERM` on the sidecar's temp→rename under Windows, losing the note ~30% of the time. Two confident
+test-level theories were both wrong and neither changed the 4/12 failure rate. See
+[[gotchas-and-lessons]]. **Reach for `--repeat-each N` to make an intermittent failure reproducible,
+then dump the app's own state on failure (error banners, signal-derived classes, the file on disk)
+rather than reasoning from the assertion alone.**
 
 **Gotcha that cost real time:** `npx playwright test` / `npm run e2e:only` do **NOT rebuild** the
 renderer — only `npm run e2e` does (`electron:build && playwright test`). Debugging a renderer

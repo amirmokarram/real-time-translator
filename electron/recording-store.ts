@@ -74,11 +74,36 @@ export async function saveNotes(
 
     const tmp = `${sidecar}.tmp`;
     await fsp.writeFile(tmp, merged, 'utf-8');
-    await fsp.rename(tmp, sidecar);
+    await replaceFile(tmp, sidecar, merged);
     return { saved: true };
   } catch (err: unknown) {
     return { saved: false, error: err instanceof Error ? err.message : String(err) };
   }
+}
+
+/**
+ * Move `tmp` over `target`, working around Windows.
+ *
+ * Windows refuses to rename onto a path another process has open — an antivirus
+ * scanner, a sync client or a backup agent touching the recordings folder is
+ * enough — and fails with EPERM/EACCES/EBUSY. That is transient, so retry
+ * briefly; only if it keeps failing do we write in place, trading the atomic
+ * swap for not losing the user's note.
+ */
+async function replaceFile(tmp: string, target: string, contents: string): Promise<void> {
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      await fsp.rename(tmp, target);
+      return;
+    } catch (err: unknown) {
+      const code = (err as NodeJS.ErrnoException).code;
+      if (code !== 'EPERM' && code !== 'EACCES' && code !== 'EBUSY') throw err;
+      await new Promise((resolve) => setTimeout(resolve, 20 * 2 ** attempt));
+    }
+  }
+
+  await fsp.writeFile(target, contents, 'utf-8');
+  await fsp.rm(tmp, { force: true });
 }
 
 /** List past sessions, newest first, pairing each audio file with its sidecar. */

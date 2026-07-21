@@ -88,13 +88,17 @@ export interface SessionTranscript {
 }
 
 /**
- * Notes taken while reviewing a session. Line notes are keyed by the transcript
- * entry's `offsetMs` rather than its index: the offset is what the note is really
- * about (a moment in the audio), and it stays meaningful on its own.
+ * Notes taken while reviewing a session.
+ *
+ * Line notes carry the transcript entry's `index` as their identity and its
+ * `offsetMs` for readability. Offset alone is not unique — several sentences can
+ * be recognized inside one chunk of audio and share a start — and keying on it
+ * made two rows edit the same note. Files written before this carry only
+ * `offsetMs` and are matched back by it.
  */
 export interface SessionNotes {
   session?: string;
-  lines?: { offsetMs: number; text: string }[];
+  lines?: { index?: number; offsetMs: number; text: string }[];
 }
 
 export interface SessionTranscriptEntry {

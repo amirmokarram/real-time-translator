@@ -114,6 +114,43 @@ test.describe('recording enabled', () => {
     expect(second.offsetMs - first.offsetMs).toBeGreaterThan(1000);
   });
 
+  test('a note belongs to one row, even when rows share a timestamp', async ({ page }) => {
+    // Two sentences inside ONE finalized fragment: the mock backend reports no
+    // word timings, so both legitimately fall at the same moment in the audio.
+    // Note state used to be keyed by that timestamp, so the pair shared a note
+    // and opening one editor opened both.
+    await startCapture(page);
+    await feed(page, { kind: 'final', text: 'One two three. Four five six.', endOfUtterance: true });
+    await expect(page.locator('.history-row')).toHaveCount(2);
+    await page.click('button.capture-btn');
+
+    await page.getByRole('link', { name: 'Review' }).click();
+    const rows = page.locator('.transcript-row');
+    await expect(rows).toHaveCount(2);
+
+    // Both rows really do sit at the same offset — the collision is real.
+    const offsets = await page.evaluate(() =>
+      Array.from(document.querySelectorAll('.transcript-row .tcell-meta')).map(
+        (el) => el.textContent!.trim()
+      )
+    );
+    expect(offsets[0]).toBe(offsets[1]);
+
+    // Opening the first row's editor must not open the second's.
+    await rows.nth(0).locator('.note-btn').click();
+    const editor = page.locator('.line-note .note-input');
+    await expect(editor).toHaveCount(1);
+    await expect(editor).toBeVisible();
+
+    await editor.fill('Only about the first line.');
+    await editor.blur();
+
+    // …and the note stays on that row alone.
+    await expect(page.locator('.line-note')).toHaveCount(1);
+    await expect(page.locator('.transcript-row.noted')).toHaveCount(1);
+    await expect(rows.nth(0)).toHaveClass(/noted/);
+  });
+
   test('typed rows are left out of the sidecar — they have no place in the audio', async ({
     page,
     recordingsDir,
@@ -314,22 +351,30 @@ test.describe('review view', () => {
     await page.getByRole('link', { name: 'Review' }).click();
     await expect(page.locator('.transcript-row')).toHaveCount(2);
 
-    // A note on the whole session…
-    await page.fill('.session-note-input', 'Follow up on the pricing question.');
-    await page.locator('.session-note-input').blur();
-
-    // …and one pinned to the second line.
-    await page.locator('.transcript-row').nth(1).locator('.note-btn').click();
-    await page.fill('.line-note .note-input', 'They disagreed here.');
-    await page.locator('.line-note .note-input').blur();
-
     const [json] = await sidecars(recordingsDir);
     const read = async () =>
       JSON.parse(await fs.readFile(path.join(recordingsDir, json), 'utf-8'));
 
-    // Wait on the LINE note: it is saved second, so polling the session note
-    // would let the read race ahead of it.
+    // A note on the whole session — wait for it to reach disk before writing the
+    // next, so the two saves can't interleave under load and drop one.
+    await page.fill('.session-note-input', 'Follow up on the pricing question.');
+    await page.locator('.session-note-input').blur();
+    await expect.poll(async () => (await read()).notes?.session ?? '').toBe(
+      'Follow up on the pricing question.'
+    );
+
+    // …and one pinned to the second line. Typed with real key events rather than
+    // fill(): the editor is created the moment its row's button is clicked, and a
+    // one-shot value set can land before Angular's own input listener is live —
+    // leaving the text visible in the DOM but never seen by ngModel.
+    await page.locator('.transcript-row').nth(1).locator('.note-btn').click();
+    const lineNote = page.locator('.line-note .note-input');
+    await expect(lineNote).toBeVisible();
+    await lineNote.pressSequentially('They disagreed here.');
+    await lineNote.blur();
     await expect.poll(async () => (await read()).notes?.lines?.length ?? 0).toBe(1);
+    // A save that failed reports itself — the note must not be silently lost.
+    await expect(page.locator('.error-banner')).toHaveCount(0);
 
     const transcript = await read();
     expect(transcript.notes.session).toBe('Follow up on the pricing question.');

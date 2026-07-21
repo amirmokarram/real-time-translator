@@ -180,7 +180,7 @@ export class WhisperStream implements ISttStream {
       if (isFinal) {
         if (text && end > this.lastCompletedEnd) {
           this.lastCompletedEnd = end;
-          this.cb.final(text, true);
+          this.cb.final({ text, endOfUtterance: true });
         }
       } else if (text) {
         interim = text;

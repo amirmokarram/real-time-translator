@@ -47,9 +47,9 @@ export class ReviewComponent implements OnInit, OnDestroy {
 
   // ── Notes ──────────────────────────────────────────────────────────────────
   protected sessionNote = signal('');
-  /** Line notes for the selected session, keyed by the entry's offsetMs. */
+  /** Line notes for the selected session, keyed by transcript row index. */
   protected lineNotes = signal<Record<number, string>>({});
-  /** Which line's note editor is open, by offsetMs; null = none. */
+  /** Which line's note editor is open, by row index; null = none. */
   protected editingNote = signal<number | null>(null);
   protected savingNote = signal(false);
   protected noteSaved = signal(false);
@@ -105,10 +105,17 @@ export class ReviewComponent implements OnInit, OnDestroy {
     this.resetPriming();
 
     const notes = session?.transcript?.notes;
+    const entries = session?.transcript?.entries ?? [];
     this.sessionNote.set(notes?.session ?? '');
-    this.lineNotes.set(
-      Object.fromEntries((notes?.lines ?? []).map((n) => [n.offsetMs, n.text]))
-    );
+
+    // Notes written before line notes carried an index are matched back by
+    // offset — the first row at that moment, which is where they were shown.
+    const byIndex: Record<number, string> = {};
+    for (const note of notes?.lines ?? []) {
+      const index = note.index ?? entries.findIndex((e) => e.offsetMs === note.offsetMs);
+      if (index >= 0) byIndex[index] = note.text;
+    }
+    this.lineNotes.set(byIndex);
   }
 
   /**
@@ -245,23 +252,23 @@ export class ReviewComponent implements OnInit, OnDestroy {
     this.scheduleSave();
   }
 
-  protected onLineNoteChange(offsetMs: number, text: string): void {
-    this.lineNotes.update((notes) => ({ ...notes, [offsetMs]: text }));
+  protected onLineNoteChange(index: number, text: string): void {
+    this.lineNotes.update((notes) => ({ ...notes, [index]: text }));
     this.scheduleSave();
   }
 
-  protected noteFor(offsetMs: number): string {
-    return this.lineNotes()[offsetMs] ?? '';
+  protected noteFor(index: number): string {
+    return this.lineNotes()[index] ?? '';
   }
 
-  protected hasNote(offsetMs: number): boolean {
-    return this.noteFor(offsetMs).trim().length > 0;
+  protected hasNote(index: number): boolean {
+    return this.noteFor(index).trim().length > 0;
   }
 
   /** Open (or close) the note editor for a line without seeking the player. */
-  protected toggleNoteEditor(offsetMs: number, event: MouseEvent): void {
+  protected toggleNoteEditor(index: number, event: MouseEvent): void {
     event.stopPropagation();
-    this.editingNote.update((open) => (open === offsetMs ? null : offsetMs));
+    this.editingNote.update((open) => (open === index ? null : index));
     if (this.editingNote() === null) void this.flushNotes();
   }
 
@@ -294,10 +301,16 @@ export class ReviewComponent implements OnInit, OnDestroy {
     const notes: SessionNotes = {
       session: this.sessionNote().trim() || undefined,
       // Empty text means the note was cleared — drop it rather than storing "".
+      // offsetMs rides along so the file reads sensibly on its own, but `index`
+      // is the identity: offsets are not guaranteed unique across rows.
       lines: Object.entries(this.lineNotes())
         .filter(([, text]) => text.trim().length > 0)
-        .map(([offsetMs, text]) => ({ offsetMs: Number(offsetMs), text: text.trim() }))
-        .sort((a, b) => a.offsetMs - b.offsetMs),
+        .map(([index, text]) => ({
+          index: Number(index),
+          offsetMs: this.entries[Number(index)]?.offsetMs ?? 0,
+          text: text.trim(),
+        }))
+        .sort((a, b) => a.index - b.index),
     };
 
     this.savingNote.set(true);
@@ -369,6 +382,15 @@ export class ReviewComponent implements OnInit, OnDestroy {
     const m = Math.floor((total % 3600) / 60);
     const s = total % 60;
     return h > 0 ? `${h}:${p(m)}:${p(s)}` : `${m}:${p(s)}`;
+  }
+
+  // Transcript rows show milliseconds, not just seconds like the player bar:
+  // several sentences can start within the same second (they arrive in one
+  // recognized chunk), and whole-second stamps would render them identically
+  // even though their offsets — and their seek targets — differ.
+  protected rowStamp(ms: number): string {
+    const clamped = Math.max(0, Math.floor(ms));
+    return `${this.clock(clamped)}.${String(clamped % 1000).padStart(3, '0')}`;
   }
 
   protected sessionLabel(session: RecordingSession): string {

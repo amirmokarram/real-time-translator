@@ -55,13 +55,14 @@ export class TranscriptionService {
   // the worst-case value — a sentence is only as trustworthy as its shakiest part.
   private bufferConfidence: number | null = null;
 
-  // When each fragment in `pendingFinal` began, tagged with where its text starts
-  // in the buffer. A single timestamp per buffer is not enough: one buffer often
-  // yields several sentences, and they would all claim the moment the FIRST
-  // fragment arrived — so a burst of lines all point at the same instant in the
-  // recording. Per-fragment marks let each sentence take the time of the fragment
-  // it actually starts in. Indices shift as text is consumed off the front.
-  private fragmentMarks: { index: number; at: number }[] = [];
+  // Start time of every word still sitting in `pendingFinal`, in order. A sentence
+  // takes the time of its FIRST word, and its words are dropped as it commits.
+  //
+  // Per-fragment timing is not enough on its own: one finalized fragment routinely
+  // contains several sentences, which would then all claim the fragment's start and
+  // land on the same instant in the recording — clicking any of them plays the
+  // first, and anything keyed by that timestamp collides across rows.
+  private pendingWords: number[] = [];
 
   // The active streaming backend (DeepGram today; Whisper added in Phase C).
   private stream: ISttStream | null = null;
@@ -111,19 +112,20 @@ export class TranscriptionService {
   // Semantic events from whichever backend is streaming. The protocol-specific
   // parsing lives in the strategy; here we only do sentence segmentation.
   private readonly callbacks: SttCallbacks = {
-    final: (text, endOfUtterance, confidence, speechStartAt) => {
+    final: ({ text, endOfUtterance, confidence, startedAt, wordStartedAt }) => {
       if (text) {
         if (confidence !== undefined) {
           this.bufferConfidence =
             this.bufferConfidence === null ? confidence : Math.min(this.bufferConfidence, confidence);
         }
-        // Where this fragment's text will begin once appended (the join inserts a
-        // single space unless the buffer is empty). `speechStartAt` is when the
-        // words were spoken; without it we can only use arrival time.
-        this.fragmentMarks.push({
-          index: this.pendingFinal.length === 0 ? 0 : this.pendingFinal.length + 1,
-          at: speechStartAt ?? Date.now(),
-        });
+        // One entry per word, so a sentence peeled from the middle of this
+        // fragment still knows when it started. Backends without word timings
+        // (Whisper, the E2E mock) fall back to one time for the whole fragment.
+        const fallback = startedAt ?? Date.now();
+        const words = TranscriptionService.countWords(text);
+        for (let i = 0; i < words; i++) {
+          this.pendingWords.push(wordStartedAt?.[i] ?? fallback);
+        }
         this.pendingFinal = `${this.pendingFinal} ${text}`.trim();
         this.drainSentences();
       }
@@ -153,7 +155,7 @@ export class TranscriptionService {
     this.confidenceSum = 0;
     this.confidenceCount = 0;
     this.bufferConfidence = null;
-    this.fragmentMarks = [];
+    this.pendingWords = [];
 
     // Apply latency-tuning knobs for this session.
     this.sentenceMaxWaitMs = stt?.sentenceMaxWaitMs ?? 4000;
@@ -220,29 +222,17 @@ export class TranscriptionService {
     let m: RegExpExecArray | null;
     while ((m = re.exec(this.pendingFinal)) !== null) {
       const sentence = m[1].trim();
-      // Read the front mark BEFORE consuming: the sentence starts where the
-      // buffer currently starts.
-      const startedAt = this.fragmentMarks[0]?.at;
+      // The sentence starts at the front of the buffer, so its first word is the
+      // first pending one. Read before consuming.
+      const startedAt = this.pendingWords[0];
       this.pendingFinal = this.pendingFinal.slice(m[0].length);
-      this.consumeMarks(m[0].length);
+      this.pendingWords.splice(0, TranscriptionService.countWords(sentence));
       if (sentence) this.emitSentence(sentence, startedAt);
     }
   }
 
-  // Slide the fragment marks left by `len` consumed characters. Marks that fall
-  // off the front collapse into a single mark at 0 — whichever fragment now
-  // covers the start of the remaining buffer.
-  private consumeMarks(len: number): void {
-    let covering: { index: number; at: number } | undefined;
-    const rest: { index: number; at: number }[] = [];
-
-    for (const mark of this.fragmentMarks) {
-      const index = mark.index - len;
-      if (index <= 0) covering = { index: 0, at: mark.at };
-      else rest.push({ index, at: mark.at });
-    }
-
-    this.fragmentMarks = covering ? [covering, ...rest] : rest;
+  private static countWords(text: string): number {
+    return text.split(/\s+/).filter(Boolean).length;
   }
 
   // Backend signalled end-of-speech. Drain whole sentences; commit the tail too
@@ -268,9 +258,9 @@ export class TranscriptionService {
   private commitRemainder(): void {
     this.clearSentenceTimer();
     const sentence = this.pendingFinal.trim();
-    const startedAt = this.fragmentMarks[0]?.at;
+    const startedAt = this.pendingWords[0];
     this.pendingFinal = '';
-    this.fragmentMarks = [];
+    this.pendingWords = [];
     this.interimText.set('');
     if (sentence) this.emitSentence(sentence, startedAt);
   }

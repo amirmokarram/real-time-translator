@@ -29,7 +29,10 @@ export class MockSttStream implements ISttStream {
         cb.interim(detail.text ?? '');
         break;
       case 'final':
-        cb.final(detail.text ?? '', detail.endOfUtterance ?? false);
+        cb.final({
+          text: detail.text ?? '',
+          endOfUtterance: detail.endOfUtterance ?? false,
+        });
         break;
       case 'utteranceEnd':
         cb.utteranceEnd();

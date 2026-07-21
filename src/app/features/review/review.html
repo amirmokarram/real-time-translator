@@ -140,12 +140,12 @@
             <div
               class="transcript-row"
               [class.active]="activeIndex() === $index"
-              [class.noted]="hasNote(entry.offsetMs)"
+              [class.noted]="hasNote($index)"
               (click)="seekTo(entry.offsetMs)"
               title="Jump to this moment">
               <div class="tcell">
                 <p class="tcell-text" [class.rtl-text]="sourceLang.rtl" [attr.dir]="sourceLang.rtl ? 'rtl' : 'ltr'">{{ entry.source }}</p>
-                <span class="tcell-meta">{{ clock(entry.offsetMs) }}</span>
+                <span class="tcell-meta">{{ rowStamp(entry.offsetMs) }}</span>
               </div>
               <div class="tcell tcell-target">
                 <p class="tcell-text target-text" [class.rtl-text]="targetLang.rtl" [attr.dir]="targetLang.rtl ? 'rtl' : 'ltr'">{{ entry.target }}</p>
@@ -162,9 +162,9 @@
                 </button>
                 <button
                   class="row-btn note-btn"
-                  [class.has-note]="hasNote(entry.offsetMs)"
-                  (click)="toggleNoteEditor(entry.offsetMs, $event)"
-                  [title]="hasNote(entry.offsetMs) ? 'Edit note' : 'Add a note on this line'">
+                  [class.has-note]="hasNote($index)"
+                  (click)="toggleNoteEditor($index, $event)"
+                  [title]="hasNote($index) ? 'Edit note' : 'Add a note on this line'">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
                     <polyline points="14 2 14 8 20 8"/>
@@ -173,19 +173,19 @@
               </div>
             </div>
 
-            @if (editingNote() === entry.offsetMs || hasNote(entry.offsetMs)) {
+            @if (editingNote() === $index || hasNote($index)) {
               <div class="line-note" (click)="$event.stopPropagation()">
-                @if (editingNote() === entry.offsetMs) {
+                @if (editingNote() === $index) {
                   <textarea
                     class="note-input"
                     rows="2"
                     placeholder="Note on this line…"
-                    [ngModel]="noteFor(entry.offsetMs)"
-                    (ngModelChange)="onLineNoteChange(entry.offsetMs, $event)"
+                    [ngModel]="noteFor($index)"
+                    (ngModelChange)="onLineNoteChange($index, $event)"
                     (blur)="flushNotes()"
                     [ngModelOptions]="{ standalone: true }"></textarea>
                 } @else {
-                  <p class="note-text" (click)="toggleNoteEditor(entry.offsetMs, $event)">{{ noteFor(entry.offsetMs) }}</p>
+                  <p class="note-text" (click)="toggleNoteEditor($index, $event)">{{ noteFor($index) }}</p>
                 }
               </div>
             }
