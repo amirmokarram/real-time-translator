@@ -21,7 +21,7 @@ Built with Angular 21 + Electron 42. Dark theme; right-to-left languages (Persia
 - **Overlay mode** — a floating, always-on-top, click-through subtitle window for use over other apps.
 - **History export** — save the transcript as `.txt` or `.srt` subtitles. When a session was recorded, the `.srt` is timed against the recording, so subtitles and audio line up in any player.
 - **Session recording** — each capture session is saved to disk as an audio file, so you can go back and hear what was actually said. Optionally mixes in your microphone, so a meeting captures both sides — the mix is recording-only and never reaches speech recognition, so your own voice is not transcribed. What to record, which mic, mic balance, audio quality and destination folder are all configurable (Settings → Recording), and a failed recording never interrupts live translation.
-- **Review past sessions** — a **Review** tab lists your recordings and plays them back with the transcript beside them: click any line to jump to that moment in the audio. Take **notes** on the whole session or pinned to individual lines, and hand a whole meeting — or a single line — to the assistant to summarize or explain. Notes live alongside the transcript in one file per session.
+- **Review past sessions** — a **Review** tab lists your recordings and plays them back with the transcript beside them: click any line to jump to that moment in the audio, and the line being spoken highlights as it plays. Lines are timed from Deepgram's per-word timestamps rather than from when the text arrived, so they land on the words themselves instead of a second or two late. Take **notes** on the whole session or pinned to individual lines, and hand a whole meeting — or a single line — to the assistant to summarize or explain. Notes live alongside the transcript in one file per session, so a session is one self-contained pair of files.
 - **Assist mode (LLM Q&A)** — select transcript rows and **Ask**, or open a free-form chat:
   - Tuned by default as an **interview assistant** — explains what's being asked and gives a natural, ready-to-speak answer in simple English.
   - **4 assist providers:** Claude, OpenAI, and two local/offline options — **Ollama** and any **OpenAI-compatible server** (Docker Model Runner, LM Studio, vLLM, llama.cpp, LocalAI).
@@ -56,16 +56,19 @@ Built with Angular 21 + Electron 42. Dark theme; right-to-left languages (Persia
 - Settings persist to `userData/settings.json`.
 - Providers follow a registry pattern: translation providers in `electron/translation/`, assist providers in `electron/assist/`.
 - **STT streaming is the exception** — it runs in the renderer (browser `WebSocket`) behind an `ISttStream` strategy in `core/services/stt/`, with Deepgram and Whisper implementations.
+- **Recording is split the same way**: the renderer owns the `MediaRecorder` and the microphone mixer (both browser APIs) and streams chunks to the main process, which owns the files. It records independently of speech recognition, so a reconnect there cannot punch holes in the recording.
+- Saved sessions are played back over a custom **`rec://` scheme** registered in main, which serves byte ranges — a WebM written as a stream carries no duration, so range support is what makes it seekable at all.
 
 ```
 electron/            Main process: window, IPC, providers, prompts, settings store
   translation/       Translation provider interface + 7 implementations + registry
   assist/            Assist provider interface + 4 implementations + registry
   question-bank/     Folder index + LLM router + keyword fallback for prepared answers
+  recording-store.ts Session audio files, transcript sidecars, listing + notes
   prompts.ts         Default + custom system prompts
 src/app/
-  features/          translator, settings, overlay, assist (slide-in panel)
-  core/services/     audio, transcription, translation, assist, settings, bridge
+  features/          translator, review, settings, overlay, assist (slide-in panel)
+  core/services/     audio, recording, transcription, translation, assist, settings, bridge
     stt/             ISttStream strategy: Deepgram + Whisper (+ mock for tests)
   shared/            header, markdown pipe
 e2e/                 Playwright end-to-end test suite
@@ -124,8 +127,9 @@ Then configure keys in **Settings**:
 4. **Assist**: select one or more transcript rows and click **Ask**, or use the header **Assist** button for free-form chat.
 5. **Question Bank**: with rows selected and a bank folder configured, click **Query From Q Bank** in the assist panel — matching prepared answers appear as cards (click to open); if nothing matches, an interview-ready answer is generated instead.
 6. **Export**: save the session as `.txt` or `.srt` from the export menu.
-7. **Tray**: closing the window keeps the app running in the system tray (translation and overlay stay live) — reopen or quit from the tray menu, or turn this off in Settings → General.
-8. **Hotkeys**: control the app from anywhere — `Ctrl+Alt+C` (capture), `Ctrl+Alt+O` (overlay), `Ctrl+Alt+H` (show/hide). Rebind in Settings → Hotkeys: click a field, press the new combination, Save.
+7. **Review**: open the **Review** tab to play a past session back. Click any transcript line to jump to that moment, add notes to the session or to individual lines, and use **Ask** to put the whole meeting — or one line — to the assistant. Recording is on by default; turn it off or change what gets recorded in Settings → Recording.
+8. **Tray**: closing the window keeps the app running in the system tray (translation and overlay stay live) — reopen or quit from the tray menu, or turn this off in Settings → General.
+9. **Hotkeys**: control the app from anywhere — `Ctrl+Alt+C` (capture), `Ctrl+Alt+O` (overlay), `Ctrl+Alt+H` (show/hide). Rebind in Settings → Hotkeys: click a field, press the new combination, Save.
 
 ---
 
