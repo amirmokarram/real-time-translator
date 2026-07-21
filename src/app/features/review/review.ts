@@ -4,6 +4,7 @@ import {
 import { FormsModule } from '@angular/forms';
 import {
   RecordingSession,
+  RecordingTrack,
   SessionNotes,
   SessionTranscriptEntry,
 } from '../../core/models/app.models';
@@ -39,6 +40,8 @@ export class ReviewComponent implements OnInit, OnDestroy {
 
   protected playing = signal(false);
   protected positionMs = signal(0);
+  /** Which track is playing; only ever 'mic' for a 'separate'-mode session. */
+  protected track = signal<RecordingTrack>('main');
   /** Index of the line currently being spoken, or -1 between lines. */
   protected activeIndex = signal(-1);
 
@@ -51,8 +54,15 @@ export class ReviewComponent implements OnInit, OnDestroy {
   protected savingNote = signal(false);
   protected noteSaved = signal(false);
 
+  // Duration priming state (see onLoadedMetadata) — per loaded audio source.
+  private primed = false;
+  private priming = false;
+  private pendingSeekMs: number | null = null;
+
   private saveTimer: ReturnType<typeof setTimeout> | null = null;
   private savedFlashTimer: ReturnType<typeof setTimeout> | null = null;
+  // Serializes note writes so a stale snapshot can never land last.
+  private saveChain: Promise<void> = Promise.resolve();
 
   @ViewChild('player') playerRef!: ElementRef<HTMLAudioElement>;
 
@@ -91,6 +101,8 @@ export class ReviewComponent implements OnInit, OnDestroy {
     this.positionMs.set(0);
     this.activeIndex.set(-1);
     this.editingNote.set(null);
+    this.track.set('main');
+    this.resetPriming();
 
     const notes = session?.transcript?.notes;
     this.sessionNote.set(notes?.session ?? '');
@@ -99,10 +111,33 @@ export class ReviewComponent implements OnInit, OnDestroy {
     );
   }
 
-  /** Source URL for the player — served by the rec:// handler in the main process. */
+  /**
+   * Source URL for the player — served by the rec:// handler in the main process.
+   * In 'separate' mode the session has two tracks on one timeline, so switching
+   * track keeps every transcript offset valid.
+   */
   protected get audioSrc(): string {
-    const file = this.selected()?.file;
-    return file ? `rec://session/${encodeURIComponent(file)}` : '';
+    const session = this.selected();
+    if (!session) return '';
+    const file = this.track() === 'mic' && session.micFile ? session.micFile : session.file;
+    return `rec://session/${encodeURIComponent(file)}`;
+  }
+
+  protected setTrack(track: RecordingTrack): void {
+    if (this.track() === track) return;
+    // Switching source resets the element; carry the position over so the
+    // listener stays where they were in the meeting. The new source needs its
+    // own duration prime, and seekTo holds the position until that finishes.
+    const at = this.positionMs();
+    this.track.set(track);
+    this.resetPriming();
+    setTimeout(() => this.seekTo(at), 0);
+  }
+
+  private resetPriming(): void {
+    this.primed = false;
+    this.priming = false;
+    this.pendingSeekMs = null;
   }
 
   protected get entries(): SessionTranscriptEntry[] {
@@ -129,7 +164,40 @@ export class ReviewComponent implements OnInit, OnDestroy {
     if (el.paused) void el.play(); else el.pause();
   }
 
+  /**
+   * A WebM streamed to disk carries no duration, so the element reports
+   * `Infinity` and its seek behaviour is undefined until it learns the real
+   * length. Forcing one seek far past the end makes Chromium scan to the end and
+   * settle on a real duration; after that, seeking is reliable. Runs once per
+   * loaded source, and the UI ignores the excursion.
+   */
+  protected onLoadedMetadata(): void {
+    const el = this.playerRef.nativeElement;
+    if (this.primed || Number.isFinite(el.duration)) return;
+    this.priming = true;
+    el.currentTime = 1e101;
+  }
+
+  protected onDurationChange(): void {
+    const el = this.playerRef.nativeElement;
+    if (!this.priming || !Number.isFinite(el.duration)) return;
+
+    this.priming = false;
+    this.primed = true;
+    el.currentTime = 0;
+    this.positionMs.set(0);
+
+    // A line clicked while priming was held back — honour it now.
+    const pending = this.pendingSeekMs;
+    if (pending !== null) {
+      this.pendingSeekMs = null;
+      this.seekTo(pending);
+    }
+  }
+
   protected onTimeUpdate(): void {
+    // Priming sweeps to the end of the file; that is not a real position.
+    if (this.priming) return;
     const el = this.playerRef.nativeElement;
     const ms = el.currentTime * 1000;
     this.positionMs.set(ms);
@@ -146,6 +214,13 @@ export class ReviewComponent implements OnInit, OnDestroy {
   protected seekTo(ms: number): void {
     const el = this.playerRef?.nativeElement;
     if (!el) return;
+
+    // Seeking mid-prime would be overwritten by the prime's own reset to 0.
+    if (this.priming) {
+      this.pendingSeekMs = ms;
+      return;
+    }
+
     el.currentTime = ms / 1000;
     this.positionMs.set(ms);
     if (el.paused) void el.play();
@@ -195,13 +270,24 @@ export class ReviewComponent implements OnInit, OnDestroy {
     this.saveTimer = setTimeout(() => void this.flushNotes(), NOTE_SAVE_DEBOUNCE_MS);
   }
 
-  /** Write the current notes to the sidecar. Safe to call when nothing is pending. */
-  protected async flushNotes(): Promise<void> {
+  /**
+   * Write the current notes to the sidecar. Safe to call when nothing is pending.
+   *
+   * Saves are serialized: each one posts the whole notes object, so two in flight
+   * at once can land out of order and an older snapshot wins — e.g. blurring the
+   * session note and a line note in quick succession could write the line note
+   * and then overwrite it with the earlier state that had no lines.
+   */
+  protected flushNotes(): Promise<void> {
     if (this.saveTimer) {
       clearTimeout(this.saveTimer);
       this.saveTimer = null;
     }
+    this.saveChain = this.saveChain.then(() => this.writeNotes());
+    return this.saveChain;
+  }
 
+  private async writeNotes(): Promise<void> {
     const session = this.selected();
     if (!session?.transcript) return;
 

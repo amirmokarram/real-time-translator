@@ -49,6 +49,8 @@ export class TranslatorComponent implements OnInit, OnDestroy {
   // Previous value of audio.isCapturing(), so the effect below can spot the
   // true→false edge rather than firing on every read.
   private wasCapturing = false;
+  // In-flight session finish, shared by the effect and ngOnDestroy.
+  private finishPromise: Promise<void> | null = null;
 
   // Live partial translation (Phase B): debounce-translate the in-progress
   // English so the reader can follow along before the sentence finalizes.
@@ -108,7 +110,12 @@ export class TranslatorComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     if (this.partialTimer) clearTimeout(this.partialTimer);
-    if (this.audio.isCapturing()) this.audio.stopCapture();
+    // Navigating away mid-capture stops it — but the effect below dies with this
+    // component, so the session has to be finished explicitly here. The services
+    // it touches are root-scoped, so the work completes fine after teardown.
+    if (this.audio.isCapturing()) {
+      void this.audio.stopCapture().then(() => this.finishSession());
+    }
   }
 
   // Called by Translate button and Ctrl+Enter — reads the manual input box
@@ -307,7 +314,19 @@ export class TranslatorComponent implements OnInit, OnDestroy {
   // translated before the transcript is complete. Drain it here rather than
   // waiting on the effect (which runs on Angular's schedule, not ours), then file
   // the sidecar next to the audio. No-op when nothing was recorded.
-  private async finishSession(): Promise<void> {
+  //
+  // Re-entrant on purpose: a stop can reach this from both the isCapturing effect
+  // and ngOnDestroy, and they must not race into two half-drained writes.
+  private finishSession(): Promise<void> {
+    if (!this.finishPromise) {
+      this.finishPromise = this.runFinishSession().finally(() => {
+        this.finishPromise = null;
+      });
+    }
+    return this.finishPromise;
+  }
+
+  private async runFinishSession(): Promise<void> {
     const tail = this.transcription.takePending();
     if (tail.length > 0) this.sttQueue.push(...tail);
     await this.drainSttQueue();

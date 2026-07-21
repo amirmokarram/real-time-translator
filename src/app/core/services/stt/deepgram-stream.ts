@@ -4,8 +4,16 @@ interface DeepGramResult {
   type: string; // 'Results' | 'UtteranceEnd' | 'SpeechStarted' | …
   is_final?: boolean;
   speech_final?: boolean;
+  // Seconds from the start of this connection's audio. `start` is the segment
+  // boundary; the first word's own start is tighter (a segment can open with
+  // silence), so we prefer that when words are present.
+  start?: number;
   channel?: {
-    alternatives?: Array<{ transcript: string; confidence: number }>;
+    alternatives?: Array<{
+      transcript: string;
+      confidence: number;
+      words?: Array<{ start: number; end: number }>;
+    }>;
   };
 }
 
@@ -21,6 +29,11 @@ export class DeepGramStream implements ISttStream {
   private cb!: SttCallbacks;
   private active = false;
   private opened = false; // true once the first connection has succeeded
+
+  // Wall-clock moment this connection's audio began, i.e. the zero point that
+  // DeepGram's `start` timings are relative to. Reset on every (re)connect,
+  // because each connection is a fresh stream that starts counting from 0 again.
+  private streamStartWall: number | null = null;
 
   // Fallback Opus bitrate (kbps) when settings don't supply one. The original
   // 16 kbps is aggressively compressed even for speech and throws away detail the
@@ -135,8 +148,14 @@ export class DeepGramStream implements ISttStream {
 
           if (msg.is_final) {
             // Finalized fragment (+ whether DeepGram detected end-of-speech).
-            // The confidence rides along so the UI can flag shaky recognition.
-            this.cb.final(transcript, !!msg.speech_final, alt?.confidence);
+            // The confidence rides along so the UI can flag shaky recognition,
+            // and the audio timing so a recording can be seeked to these words.
+            const audioStart = alt?.words?.[0]?.start ?? msg.start;
+            const speechStartAt =
+              audioStart !== undefined && this.streamStartWall !== null
+                ? this.streamStartWall + audioStart * 1000
+                : undefined;
+            this.cb.final(transcript, !!msg.speech_final, alt?.confidence, speechStartAt);
           } else if (transcript) {
             // Interim word(s): live tail for the panel.
             this.cb.interim(transcript);
@@ -170,6 +189,7 @@ export class DeepGramStream implements ISttStream {
       this.cb.error('Audio recorder error.');
     };
 
+    this.streamStartWall = Date.now();
     this.mediaRecorder.start(250);   // 250 ms chunks → ~200 ms latency
   }
 

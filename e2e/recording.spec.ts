@@ -1,7 +1,7 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { test, expect } from './fixtures';
-import { startCapture, say } from './helpers';
+import { feed, startCapture, say } from './helpers';
 
 // The harness launches Chromium with --use-fake-device-for-media-stream, so the
 // MediaRecorder here is real and produces genuine (silent) WebM — these assertions
@@ -85,6 +85,35 @@ test.describe('recording enabled', () => {
     }
   });
 
+  test('sentences from one utterance get their own offsets, not a shared one', async ({
+    page,
+    recordingsDir,
+  }) => {
+    await startCapture(page);
+
+    // Two finalized fragments inside ONE utterance, seconds apart. Both sentences
+    // are peeled from the same buffer — the bug was that they then shared the
+    // timestamp of the first fragment, so a burst of lines all pointed at the
+    // same instant in the recording and the highlight sat still while the audio
+    // moved on.
+    await feed(page, { kind: 'final', text: 'First sentence.', endOfUtterance: false });
+    await page.waitForTimeout(1500);
+    await feed(page, { kind: 'final', text: 'Second sentence.', endOfUtterance: true });
+    await expect(page.locator('.history-row')).toHaveCount(2);
+
+    await page.click('button.capture-btn');
+    await expect.poll(() => sidecars(recordingsDir)).toHaveLength(1);
+
+    const [json] = await sidecars(recordingsDir);
+    const transcript = JSON.parse(
+      await fs.readFile(path.join(recordingsDir, json), 'utf-8')
+    );
+
+    expect(transcript.entries).toHaveLength(2);
+    const [first, second] = transcript.entries;
+    expect(second.offsetMs - first.offsetMs).toBeGreaterThan(1000);
+  });
+
   test('typed rows are left out of the sidecar — they have no place in the audio', async ({
     page,
     recordingsDir,
@@ -106,6 +135,28 @@ test.describe('recording enabled', () => {
 
     expect(transcript.entries).toHaveLength(1);
     expect(transcript.entries[0].source).toBe('Spoken line.');
+  });
+
+  test('navigating away mid-capture still files the transcript', async ({
+    page,
+    recordingsDir,
+  }) => {
+    await startCapture(page);
+    await say(page, 'Said before leaving.');
+    await expect(page.locator('.history-row')).toHaveCount(1);
+
+    // Leave without pressing Stop: the route change destroys the translator,
+    // which stops capture — the session must still be finished.
+    await page.getByRole('link', { name: 'Settings' }).click();
+    await expect(page.locator('.settings-sidebar')).toBeVisible();
+
+    await expect.poll(() => sidecars(recordingsDir)).toHaveLength(1);
+    const [json] = await sidecars(recordingsDir);
+    const transcript = JSON.parse(
+      await fs.readFile(path.join(recordingsDir, json), 'utf-8')
+    );
+    expect(transcript.entries).toHaveLength(1);
+    expect(transcript.entries[0].source).toBe('Said before leaving.');
   });
 
   test('recording failures do not stop translation', async ({ page, recordingsDir }) => {
@@ -165,6 +216,90 @@ test.describe('review view', () => {
     expect(offset).toBeGreaterThan(0);
   });
 
+  // Seeking a streamed WebM only works if the rec:// handler answers byte ranges:
+  // the file has no duration header, so range support is the only thing that lets
+  // the player move past what it has already buffered. Asserted at the protocol
+  // level because a short test recording buffers whole and would seek fine either
+  // way — the failure only shows up on a real, long meeting.
+  test('the rec:// handler answers byte-range requests with 206', async ({
+    page,
+    electronApp,
+  }) => {
+    await startCapture(page);
+    await say(page, 'Ranged.');
+    // Give the recorder time to hand over a chunk — stopping immediately can
+    // leave a zero-byte file, and a range of an empty file proves nothing.
+    await page.waitForTimeout(1200);
+    await page.click('button.capture-btn');
+
+    await page.getByRole('link', { name: 'Review' }).click();
+    await expect(page.locator('.session-item')).toHaveCount(1);
+
+    const url = await page.evaluate(
+      () => (document.querySelector('audio') as HTMLAudioElement).src
+    );
+
+    const res = await electronApp.evaluate(async ({ net }, target) => {
+      const full = await net.fetch(target);
+      const size = Number(full.headers.get('Content-Length'));
+      const partial = await net.fetch(target, { headers: { Range: 'bytes=10-19' } });
+      const body = await partial.arrayBuffer();
+      return {
+        size,
+        acceptRanges: full.headers.get('Accept-Ranges'),
+        contentType: full.headers.get('Content-Type'),
+        status: partial.status,
+        contentRange: partial.headers.get('Content-Range'),
+        bytes: body.byteLength,
+      };
+    }, url);
+
+    expect(res.size).toBeGreaterThan(20);
+    expect(res.acceptRanges).toBe('bytes');
+    expect(res.contentType).toBe('audio/webm');
+    expect(res.status).toBe(206);
+    expect(res.contentRange).toBe(`bytes 10-19/${res.size}`);
+    expect(res.bytes).toBe(10);
+  });
+
+  test('clicking a late line seeks to it instead of snapping back to the start', async ({
+    page,
+  }) => {
+    // Deliberately long enough that the target is past what the player buffers
+    // up front: the bug was that without byte-range support the media could not
+    // seek beyond its buffer, so every click reset the audio to 0.
+    await startCapture(page);
+    for (let i = 0; i < 5; i++) {
+      await say(page, `Line ${i}.`);
+      await page.waitForTimeout(2000);
+    }
+    await page.click('button.capture-btn');
+
+    await page.getByRole('link', { name: 'Review' }).click();
+    await expect(page.locator('.transcript-row')).toHaveCount(5);
+
+    // The last line sits several seconds in.
+    const rows = page.locator('.transcript-row');
+    const targetMs = await page.evaluate(() => {
+      const el = document.querySelectorAll('.transcript-row .tcell-meta');
+      const text = el[el.length - 1].textContent!.trim(); // "m:ss"
+      const [m, s] = text.split(':').map(Number);
+      return (m * 60 + s) * 1000;
+    });
+    expect(targetMs).toBeGreaterThan(4000);
+
+    await rows.last().click();
+
+    // Lands on the line, not back at zero.
+    await expect
+      .poll(
+        () =>
+          page.evaluate(() => (document.querySelector('audio') as HTMLAudioElement).currentTime),
+        { timeout: 8000 }
+      )
+      .toBeGreaterThan(targetMs / 1000 - 1.5);
+  });
+
   test('notes persist into the sidecar without disturbing the transcript', async ({
     page,
     recordingsDir,
@@ -192,11 +327,12 @@ test.describe('review view', () => {
     const read = async () =>
       JSON.parse(await fs.readFile(path.join(recordingsDir, json), 'utf-8'));
 
-    await expect.poll(async () => (await read()).notes?.session).toBe(
-      'Follow up on the pricing question.'
-    );
+    // Wait on the LINE note: it is saved second, so polling the session note
+    // would let the read race ahead of it.
+    await expect.poll(async () => (await read()).notes?.lines?.length ?? 0).toBe(1);
 
     const transcript = await read();
+    expect(transcript.notes.session).toBe('Follow up on the pricing question.');
     expect(transcript.notes.lines).toHaveLength(1);
     expect(transcript.notes.lines[0].text).toBe('They disagreed here.');
     // Pinned to the line it was written on.
@@ -281,6 +417,50 @@ test.describe('review view', () => {
     await expect(page.locator('.session-meta')).toContainText('no transcript');
     await expect(page.locator('.transcript-row')).toHaveCount(0);
     await expect(page.locator('.player-bar')).toBeVisible();
+  });
+});
+
+// 'separate' mode can't be produced under test — the fake media device only
+// offers a microphone, and the mic modes only engage for system audio. The pair
+// of files it writes is easy to stage directly, which is what matters here: that
+// a two-track session lists as ONE session with a track toggle, not as a session
+// plus a transcript-less duplicate.
+test.describe('two-track (separate mode) sessions', () => {
+  test.use({ seed: { recording: { enabled: false } } });
+
+  test('a system/mic pair lists as one session with a track toggle', async ({
+    page,
+    recordingsDir,
+  }) => {
+    const stem = 'meeting-2026-07-21-0900';
+    await fs.writeFile(path.join(recordingsDir, `${stem}-system.webm`), 'system-audio');
+    await fs.writeFile(path.join(recordingsDir, `${stem}-mic.webm`), 'mic-audio');
+    await fs.writeFile(
+      path.join(recordingsDir, `${stem}-system.json`),
+      JSON.stringify({
+        startedAt: new Date().toISOString(),
+        durationMs: 60000,
+        languages: { source: 'en', target: 'fa' },
+        entries: [{ offsetMs: 0, source: 'Staged line.', target: '[fa] Staged line.', provider: 'echo' }],
+      })
+    );
+
+    await page.getByRole('link', { name: 'Review' }).click();
+
+    // One entry, not two — the mic file rides along instead of listing itself.
+    await expect(page.locator('.session-item')).toHaveCount(1);
+    await expect(page.locator('.session-meta')).not.toContainText('no transcript');
+    await expect(page.locator('.transcript-row')).toHaveCount(1);
+
+    // Switching track swaps the audio source and keeps the transcript.
+    await expect(page.locator('.track-toggle')).toBeVisible();
+    await page.locator('.track-btn', { hasText: 'Mic' }).click();
+    await expect
+      .poll(() =>
+        page.evaluate(() => (document.querySelector('audio') as HTMLAudioElement).src)
+      )
+      .toContain('-mic.webm');
+    await expect(page.locator('.transcript-row')).toHaveCount(1);
   });
 });
 

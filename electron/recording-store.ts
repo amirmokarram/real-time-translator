@@ -23,6 +23,10 @@ export interface RecordingSession {
   sizeBytes: number;
   modifiedAt: string;
   transcript: unknown | null; // parsed sidecar (SessionTranscript) when present
+  // 'separate' mode writes the microphone to its own file. It is the same
+  // session on the same timeline, not another one, so it rides along here
+  // instead of appearing in the list as a transcript-less duplicate.
+  micFile?: string;
 }
 
 /**
@@ -82,8 +86,14 @@ export async function listSessions(folderPath: string): Promise<RecordingSession
   const dir = recordingsDir(folderPath);
   const names = await fsp.readdir(dir).catch(() => [] as string[]);
 
+  const audioFiles = names.filter((n) => n.endsWith('.webm'));
+  // In 'separate' mode a session is a '-system'/'-mic' pair. Index the mic files
+  // and skip them in the main loop so the pair lists as one session.
+  const micFiles = new Set(audioFiles.filter((n) => n.endsWith('-mic.webm')));
+
   const sessions: RecordingSession[] = [];
-  for (const name of names.filter((n) => n.endsWith('.webm'))) {
+  for (const name of audioFiles) {
+    if (micFiles.has(name)) continue;
     const full = path.join(dir, name);
     const stat = await fsp.stat(full).catch(() => null);
     if (!stat) continue;
@@ -97,12 +107,14 @@ export async function listSessions(folderPath: string): Promise<RecordingSession
       transcript = null;
     }
 
+    const mic = name.replace(/-system\.webm$/, '-mic.webm');
     sessions.push({
       file: name,
       path: full,
       sizeBytes: stat.size,
       modifiedAt: stat.mtime.toISOString(),
       transcript,
+      micFile: mic !== name && micFiles.has(mic) ? mic : undefined,
     });
   }
 

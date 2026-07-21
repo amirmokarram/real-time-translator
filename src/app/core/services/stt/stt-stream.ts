@@ -19,8 +19,18 @@ export interface SttCallbacks {
    * A chunk of finalized text. `endOfUtterance` = the speaker paused (close the
    * utterance). `confidence` (0–1) is the backend's own certainty, when it reports
    * one — used to flag shaky recognition, not to gate anything.
+   *
+   * `speechStartAt` is the epoch-ms moment these words were actually SPOKEN, when
+   * the backend reports audio timings (Deepgram does; Whisper doesn't). Without
+   * it the consumer falls back to arrival time, which trails the speech by the
+   * recognizer's latency — fine for ordering, too late for seeking a recording.
    */
-  final(text: string, endOfUtterance: boolean, confidence?: number): void;
+  final(
+    text: string,
+    endOfUtterance: boolean,
+    confidence?: number,
+    speechStartAt?: number
+  ): void;
   /** Current in-flight (not yet final) words, for the live panel. */
   interim(text: string): void;
   /** Utterance ended with no accompanying text (silence backstop). */

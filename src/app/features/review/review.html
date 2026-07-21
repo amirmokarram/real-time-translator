@@ -67,6 +67,15 @@
 
         <span class="time-label">{{ clock(durationMs) }}</span>
 
+        <!-- Only a 'separate'-mode session has a second track. Same timeline, so
+             the transcript and its offsets stay valid across the switch. -->
+        @if (session.micFile) {
+          <div class="track-toggle" title="This session was recorded as two separate tracks">
+            <button class="track-btn" [class.active]="track() === 'main'" (click)="setTrack('main')">System</button>
+            <button class="track-btn" [class.active]="track() === 'mic'" (click)="setTrack('mic')">Mic</button>
+          </div>
+        }
+
         @if (entries.length > 0) {
           <button
             class="ask-btn"
@@ -100,6 +109,8 @@
         <audio
           #player
           [src]="audioSrc"
+          (loadedmetadata)="onLoadedMetadata()"
+          (durationchange)="onDurationChange()"
           (timeupdate)="onTimeUpdate()"
           (play)="playing.set(true)"
           (pause)="playing.set(false)"

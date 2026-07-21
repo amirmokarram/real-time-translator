@@ -388,9 +388,12 @@ export function registerIpcHandlers(
     if (!audio) return { deleted: false };
 
     const sidecar = audio.replace(/\.webm$/, '') + '.json';
+    // 'separate' mode's mic track is part of the same session — it goes too.
+    const mic = audio.replace(/-system\.webm$/, '-mic.webm');
     try {
       await shell.trashItem(audio);
       await shell.trashItem(sidecar).catch(() => {}); // may not exist
+      if (mic !== audio) await shell.trashItem(mic).catch(() => {});
       return { deleted: true };
     } catch (err: unknown) {
       return { deleted: false, error: err instanceof Error ? err.message : String(err) };

@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: efb6c1f4-0f8c-44d0-8361-1634d470274d
-  modified: 2026-07-21T16:59:48.951Z
+  modified: 2026-07-21T21:34:13.427Z
 ---
 
 Playwright E2E tests live in `e2e/` and drive the **built** Electron app + real Angular
@@ -57,6 +57,20 @@ CSP `media-src` or protocol-handler regression); missing sidecar still plays; no
 **the merge leaves the transcript untouched**; notes reload from disk after navigating away;
 session Ask carries the whole transcript, per-line Ask carries **only** that line (`toHaveText`, so
 a leak of the whole meeting fails). **40 passed, 1 skipped locally.**
+
+**Lesson from the post-live-test fixes (2026-07-21): verify a regression test FAILS without its
+fix.** Two of these tests were worthless until checked. The first seek test asserted only
+`currentTime > 0` and passed against the broken build; a rewrite still passed both ways because a
+short test recording buffers whole and seeks fine without range support — the failure only appears
+on a long file. It was moved down to the level that actually broke: the spec calls the `rec://`
+handler through `electronApp.evaluate(({net}) => net.fetch(url, {headers:{Range:'bytes=10-19'}}))`
+and asserts `206`, the exact `Content-Range`, `Accept-Ranges`, `Content-Type` and a 10-byte body.
+(A third attempt at the fails-without-fix check was itself invalid: the temporary edit didn't
+compile, so `electron:compile` aborted and the test silently ran against the previous good build —
+**check the compile succeeded before trusting a negative result**.) The offset-clustering and
+navigate-away tests were both confirmed to fail with their fix reverted. Also: a range test that
+stops capture immediately gets a **zero-byte file**, and a range of an empty file proves nothing —
+wait ~1.2 s for a chunk first, as the other recording tests do.
 
 **Gotcha that cost real time:** `npx playwright test` / `npm run e2e:only` do **NOT rebuild** the
 renderer — only `npm run e2e` does (`electron:build && playwright test`). Debugging a renderer

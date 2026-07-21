@@ -1,6 +1,8 @@
-import { app, BrowserWindow, ipcMain, net, protocol, session, shell } from 'electron';
+import { app, BrowserWindow, ipcMain, protocol, session, shell } from 'electron';
 import * as path from 'path';
-import { pathToFileURL } from 'url';
+import * as fs from 'fs';
+import * as fsp from 'fs/promises';
+import { Readable } from 'stream';
 import { registerIpcHandlers } from './ipc-handlers';
 import { resolveSessionFile } from './recording-store';
 import { SettingsStore } from './settings-store';
@@ -167,14 +169,60 @@ app.whenReady().then(async () => {
   // rec://session/<basename> → the recording of that name, and nothing else.
   // The basename comes from the renderer, so resolveSessionFile refuses anything
   // that resolves outside the recordings folder.
+  //
+  // Range requests are served by hand rather than delegated to net.fetch: without
+  // a 206 + Content-Range the player cannot seek past what it has already
+  // buffered, and a click on a transcript line snaps the audio back to the start.
+  // A streamed WebM has no duration header, so the range response is the ONLY
+  // thing making the file seekable.
   protocol.handle('rec', async (request) => {
     const file = decodeURIComponent(new URL(request.url).pathname).replace(/^\//, '');
     const resolved = resolveSessionFile(settingsStore.get().recording.folderPath, file);
     if (!resolved) return new Response('Not found', { status: 404 });
 
-    // net.fetch on a file:// URL honours the Range header, so the player can seek
-    // without pulling the whole meeting down first.
-    return net.fetch(pathToFileURL(resolved).toString(), { headers: request.headers });
+    let size: number;
+    try {
+      size = (await fsp.stat(resolved)).size;
+    } catch {
+      return new Response('Not found', { status: 404 });
+    }
+
+    const base = { 'Content-Type': 'audio/webm', 'Accept-Ranges': 'bytes' };
+    const body = (start?: number, end?: number): ReadableStream =>
+      Readable.toWeb(fs.createReadStream(resolved, { start, end })) as ReadableStream;
+
+    const match = request.headers.get('Range')?.match(/^bytes=(\d*)-(\d*)$/);
+    if (!match) {
+      return new Response(body(), {
+        status: 200,
+        headers: { ...base, 'Content-Length': String(size) },
+      });
+    }
+
+    // "bytes=N-M", "bytes=N-" (open-ended) and "bytes=-N" (final N bytes).
+    let start = match[1] ? Number(match[1]) : 0;
+    let end = match[2] ? Number(match[2]) : size - 1;
+    if (!match[1] && match[2]) {
+      start = Math.max(0, size - Number(match[2]));
+      end = size - 1;
+    }
+    end = Math.min(end, size - 1);
+
+    if (start >= size || start > end) {
+      return new Response(null, {
+        status: 416,
+        headers: { ...base, 'Content-Range': `bytes */${size}` },
+      });
+    }
+
+    return new Response(body(start, end), {
+      status: 206,
+      headers: {
+        ...base,
+        'Content-Range': `bytes ${start}-${end}/${size}`,
+        'Content-Length': String(end - start + 1),
+      },
+    });
   });
 
   createMainWindow();

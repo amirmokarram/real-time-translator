@@ -114,6 +114,10 @@ export interface RecordingSession {
   // Absent when a session was interrupted before its sidecar was written: the
   // audio is still playable, just not navigable.
   transcript: SessionTranscript | null;
+  // 'separate' recording mode writes the microphone to its own file — same
+  // session, same timeline, so Review offers it as a track rather than a
+  // second entry in the list.
+  micFile?: string;
 }
 
 // ── Translation ───────────────────────────────────────────────────────────────
