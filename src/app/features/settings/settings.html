@@ -496,8 +496,11 @@
       <section class="settings-section">
         <h2 class="section-title">Speech Recognition</h2>
         <p class="section-desc">
-          Converts your captured system audio to text in real-time. Choose
-          <strong>DeepGram</strong> (cloud, free tier) or <strong>Whisper</strong> (local, runs on your machine).
+          Converts your captured system audio to text in real-time. <strong>DeepGram</strong> (cloud) is
+          built for streaming and is the recommended engine for live meetings. <strong>Whisper</strong>
+          (local) exists for when the audio can't leave your machine — it's accurate on complete
+          sentences, but it decodes in windows rather than word by word, so expect more delay and
+          output that revises itself as it goes.
         </p>
 
         <div class="provider-card active-provider">
@@ -536,9 +539,17 @@
                 [ngModel]="sttProvider()"
                 (ngModelChange)="onSttProviderChange($event)"
                 [ngModelOptions]="{ standalone: true }">
-                <option value="deepgram">DeepGram (Cloud)</option>
-                <option value="whisper">Whisper (Local)</option>
+                <option value="deepgram">DeepGram (Cloud) — recommended for live</option>
+                <option value="whisper">Whisper (Local) — offline, higher latency</option>
               </select>
+              @if (isWhisper()) {
+                <p class="field-hint">
+                  Pick this when the audio must stay on your machine. Whisper transcribes in windows
+                  instead of word by word, so lines arrive later and can change before they settle —
+                  the trade you make for keeping the audio private. The accuracy tuning below
+                  (custom vocabulary, model, audio quality) applies to DeepGram only.
+                </p>
+              }
             </div>
 
             @if (!isWhisper()) {

@@ -14,7 +14,8 @@ Built with Angular 21 + Electron 42. Dark theme; right-to-left languages (Persia
 
 - **System-audio capture** — transcribes what you hear (system loopback) or a selected microphone; your source choice is remembered across restarts.
 - **Any-to-any language pair** — pick source and target languages (Settings → Languages) from a 20-language catalog; translate between any supported pair. RTL languages get correct direction and font automatically.
-- **2 switchable streaming speech-to-text engines** — [Deepgram](https://deepgram.com) (Nova-2, cloud) or [WhisperLive](https://github.com/collabora/WhisperLive) (Whisper, fully local), with real-time per-sentence segmentation.
+- **2 switchable streaming speech-to-text engines** — [Deepgram](https://deepgram.com) (cloud, Nova-3 by default) is purpose-built for streaming and is the recommended engine for live use; [WhisperLive](https://github.com/collabora/WhisperLive) (Whisper, fully local) is there for when the audio can't leave your machine, at the cost of higher latency and output that revises as it decodes. Real-time per-sentence segmentation either way.
+- **Recognition-accuracy tuning (Deepgram)** — custom vocabulary to boost names, acronyms and jargon; selectable model (Nova-3 / Nova-2); configurable upload audio quality; and a per-session confidence readout, with low-confidence lines flagged inline so you can see exactly which words to add to your vocabulary list.
 - **7 switchable translation providers** — Claude, Google, DeepL, Microsoft, OpenAI, LibreTranslate, Ollama (local, e.g. TranslateGemma).
 - **Live dual-pane display** — chat-style history with synced source/translation rows, auto-scroll, per-row copy.
 - **Overlay mode** — a floating, always-on-top, click-through subtitle window for use over other apps.

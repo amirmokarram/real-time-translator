@@ -5,9 +5,12 @@ metadata:
   node_type: memory
   type: project
   originSessionId: c12bd86a-7df0-4dc5-8e51-8043acd4ff13
+  modified: 2026-07-21T13:14:51.268Z
 ---
 
 Adding **Whisper as a second STT provider** alongside DeepGram (started 2026-06-18, branch `feature/whisper-stt-provider`). See [[phase-status]], [[project-architecture]], [[gotchas-and-lessons]].
+
+> **STATUS 2026-07-21 — maintained, NOT developed.** Whisper is kept purely as the **offline/privacy fallback**; DeepGram is the recommended engine for live use. The limitation is architectural, not accuracy: Whisper is a *batch* model (30s training windows) and WhisperLive simulates streaming with a sliding window → latency floor, self-revising segments (which fight the app's commit-a-sentence-once design), and hallucination on short/silent chunks. On a *complete* utterance `large-v3` is excellent, so it would suit file/recording transcription well. Planned `initial_prompt` work (Phase 6E) was **deliberately dropped**. **Do not re-propose Whisper accuracy work** unless offline mode becomes a real use case or file transcription is added. Kept rather than deleted because it's the only offline path, is cleanly isolated behind `ISttStream` (costs nothing), and is a fallback for an expired key/outage.
 
 **Locked decisions (from plan Q&A):**
 - **Streaming, like DeepGram — NOT batch.** Rejected the OpenAI-compatible `/v1/audio/transcriptions` batch endpoint (and VAD-chunked WAV) because it can't replicate DeepGram's interim/real-time feel.
