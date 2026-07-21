@@ -1,6 +1,5 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
-import { SettingsService } from '../../core/services/settings.service';
 import { ElectronBridgeService } from '../../core/services/electron-bridge.service';
 import { AssistService } from '../../core/services/assist.service';
 
@@ -12,11 +11,9 @@ import { AssistService } from '../../core/services/assist.service';
   styleUrl: './header.scss',
 })
 export class HeaderComponent implements OnInit {
-  protected settings = inject(SettingsService);
   protected bridge = inject(ElectronBridgeService);
   protected assist = inject(AssistService);
 
-  protected showProviderMenu = signal(false);
   protected overlayOpen = signal(false);
   protected alwaysOnTop = signal(false);
 
@@ -40,23 +37,5 @@ export class HeaderComponent implements OnInit {
 
   protected toggleAssist(): void {
     this.assist.toggle();
-  }
-
-  protected get activeProviderName(): string {
-    const id = this.settings.activeProvider();
-    return this.settings.providerMeta(id)?.name ?? id;
-  }
-
-  protected selectProvider(id: string): void {
-    this.settings.setActiveProvider(id);
-    this.showProviderMenu.set(false);
-  }
-
-  protected toggleProviderMenu(): void {
-    this.showProviderMenu.update((v) => !v);
-  }
-
-  protected closeMenu(): void {
-    this.showProviderMenu.set(false);
   }
 }

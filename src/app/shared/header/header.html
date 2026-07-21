@@ -64,28 +64,6 @@
       </svg>
     </button>
 
-    @if (settings.loaded()) {
-      <div class="provider-selector" (click)="toggleProviderMenu()" (keydown.enter)="toggleProviderMenu()" tabindex="0">
-        <span class="provider-label">{{ activeProviderName }}</span>
-        <svg class="chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <polyline points="6 9 12 15 18 9"/>
-        </svg>
-
-        @if (showProviderMenu()) {
-          <div class="provider-menu" (click)="$event.stopPropagation()">
-            @for (p of settings.providers(); track p.id) {
-              <button
-                class="provider-option"
-                [class.active]="p.id === settings.activeProvider()"
-                (click)="selectProvider(p.id)">
-                {{ p.name }}
-              </button>
-            }
-          </div>
-        }
-      </div>
-    }
-
     @if (bridge.platform !== 'darwin') {
       <div class="window-controls">
         <button class="win-btn minimize" title="Minimize" (click)="bridge.minimizeWindow()">
@@ -104,7 +82,3 @@
     }
   </div>
 </header>
-
-@if (showProviderMenu()) {
-  <div class="menu-overlay" (click)="closeMenu()"></div>
-}

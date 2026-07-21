@@ -7,7 +7,7 @@ test('boots into the translator shell with the seeded provider', async ({ page }
 
   // Confirms the echo provider is registered (TRANSLATOR_E2E) and settings loaded
   // from the seeded settings.json (activeProvider === 'echo').
-  await expect(page.locator('.provider-label')).toHaveText('Echo (E2E test)');
+  await expect(page.locator('.provider-tag')).toHaveText('Echo (E2E test)');
 
   // Frameless custom window controls render on non-darwin.
   await expect(page.locator('.window-controls .win-btn.close')).toBeVisible();

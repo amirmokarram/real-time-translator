@@ -40,7 +40,7 @@ test('General: Always on Top toggle applies to the window and persists', async (
     .toBe(true);
 });
 
-test('switching the active translation provider persists and updates the header', async ({ page, userDataDir }) => {
+test('switching the active translation provider persists and updates the translator pane', async ({ page, userDataDir }) => {
   await page.getByRole('button', { name: 'Providers' }).click();
 
   const providerSelect = page.locator('.provider-card-body select.field-select').first();
@@ -50,9 +50,9 @@ test('switching the active translation provider persists and updates the header'
     .poll(async () => (await readSettings(userDataDir)).activeProvider)
     .toBe('openai');
 
-  // Header reads the same settings signal — it should no longer show Echo.
+  // The translator pane reads the same settings signal — it should no longer show Echo.
   await page.getByRole('link', { name: 'Translator' }).click();
-  await expect(page.locator('.provider-label')).not.toHaveText('Echo (E2E test)');
+  await expect(page.locator('.provider-tag')).not.toHaveText('Echo (E2E test)');
 });
 
 test('saving a provider API key persists it to settings.json', async ({ page, userDataDir }) => {
