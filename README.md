@@ -71,6 +71,7 @@ src/app/
   core/services/     audio, recording, transcription, translation, assist, settings, bridge
     stt/             ISttStream strategy: Deepgram + Whisper (+ mock for tests)
   shared/            header, markdown pipe
+public/              Icon sources (*.svg) + the generated *.ico files
 e2e/                 Playwright end-to-end test suite
 ```
 
@@ -100,7 +101,7 @@ Then configure keys in **Settings**:
 
 1. *(Optional)* **Languages** → choose the source and target languages from the catalog. Prompts can reference the active pair via the `${SOURCE}` / `${TARGET}` tokens.
 2. **Speech Recognition** → choose an engine. **Deepgram** (cloud): paste your API key. **Whisper** (local): start a [WhisperLive](https://github.com/collabora/WhisperLive) server (see note below), then set the endpoint (`ws://localhost:9090`) and model. → Test Connection.
-3. **Translation** → pick a provider, add its API key → Test Connection. (Switch the active provider from the header dropdown.)
+3. **Translation** → pick a provider, add its API key → Test Connection. Settings → Providers is where you switch the active provider; the current one is shown in the translation column header.
 4. *(Optional)* **Assist** → choose Claude / OpenAI (reuses that provider's key) or a local server (Ollama / OpenAI-compatible) → Test Connection.
 5. *(Optional)* **General → Question Bank Folder** → pick a local folder of markdown Q&A files to enable **Query From Q Bank** in the assist panel.
 
@@ -147,6 +148,20 @@ npm run electron:dist:win     # Windows
 npm run electron:dist:mac     # macOS
 npm run electron:dist:linux   # Linux
 ```
+
+### App icons
+
+The icons are generated, not hand-drawn — edit the SVG and regenerate:
+
+```bash
+npm run icons
+```
+
+`public/icon.svg` (the squircle tile: window, taskbar, installer, favicon) and
+`public/tray.svg` (the bare glyph: tray, and the header logo, which renders the
+file directly so it can never drift from the tray) are the only sources. The
+script rasterizes them into multi-size `.ico` files using the Electron that's
+already installed, so there is no extra image toolchain to set up.
 
 ---
 

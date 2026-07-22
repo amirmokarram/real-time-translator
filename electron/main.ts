@@ -10,6 +10,7 @@ import { OverlayManager } from './overlay-window';
 import { AudioCapture } from './audio-capture';
 import { TrayManager } from './tray';
 import { HotkeyManager } from './hotkeys';
+import { publicAsset } from './assets';
 
 const isDev = process.env['ELECTRON_DEV'] === 'true';
 // E2E runs skip the tray + close-to-tray interception: Playwright must be able
@@ -102,6 +103,9 @@ function createMainWindow(): void {
     minWidth: 720,
     minHeight: 520,
     backgroundColor: '#0f1117',
+    // Taskbar/alt-tab icon. Only read in dev — the packaged .exe carries the
+    // icon electron-builder embeds from win.icon.
+    icon: publicAsset('icon.ico'),
     frame: false,
     titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'hidden',
     webPreferences: {

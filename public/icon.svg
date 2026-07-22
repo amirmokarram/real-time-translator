@@ -1,0 +1,33 @@
+<!--
+  App icon: a speech bubble with a live audio wave inside it, on the brand
+  squircle. Deliberately alphabet-free — the source/target languages are
+  user-configurable, so the icon must not name a pair (the original said EN→فا).
+
+  This same mark is the tray icon (tray.svg) and the header logo, which renders
+  this very file via <img> — so the app never shows two different marks.
+
+  The glyph is authored in a 64x64 box (bbox x 4..60, y 6..58) and placed at
+  68.75% of the tile. The bars are holes punched through the white bubble, so
+  the gradient reads through them.
+
+  Edit here, then regenerate the .ico set: npm run icons
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="brand" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#5b4bf0"/>
+      <stop offset="1" stop-color="#8b5cf6"/>
+    </linearGradient>
+    <mask id="bubble" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64">
+      <rect width="64" height="64" fill="#000"/>
+      <path d="M16 6 H48 A12 12 0 0 1 60 18 V34 A12 12 0 0 1 48 46 H32 L18 58 V46 H16 A12 12 0 0 1 4 34 V18 A12 12 0 0 1 16 6 Z" fill="#fff"/>
+      <rect x="15" y="19" width="8" height="14" rx="4" fill="#000"/>
+      <rect x="28" y="13" width="8" height="26" rx="4" fill="#000"/>
+      <rect x="41" y="17" width="8" height="18" rx="4" fill="#000"/>
+    </mask>
+  </defs>
+  <rect width="512" height="512" rx="115" fill="url(#brand)"/>
+  <g transform="translate(80 80) scale(5.5)">
+    <rect width="64" height="64" fill="#fff" mask="url(#bubble)"/>
+  </g>
+</svg>

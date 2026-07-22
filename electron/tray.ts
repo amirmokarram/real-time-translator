@@ -1,7 +1,7 @@
 import { app, BrowserWindow, Menu, Tray } from 'electron';
-import * as path from 'path';
 import { OverlayManager } from './overlay-window';
 import { AudioCapture } from './audio-capture';
+import { publicAsset } from './assets';
 
 /**
  * System tray icon + context menu. Lets the app keep running (and translating)
@@ -97,12 +97,10 @@ export class TrayManager {
     this.refresh();
   }
 
-  // The same multi-size .ico the Windows build uses. Dev reads it straight from
-  // public/ (…/dist-electron/../public); the packaged app from extraResources
-  // (electron-builder.json copies public/ → resources/public).
+  // Glyph-only icon sized for the tray (16/20/24/32/40/48) — the app's own
+  // icon.ico is a squircle tile, which at 16px is mostly frame. tray-active.ico
+  // is the same silhouette with teal bars, for a future "capturing" state.
   private iconPath(): string {
-    return app.isPackaged
-      ? path.join(process.resourcesPath, 'public', 'favicon.ico')
-      : path.join(__dirname, '../public/favicon.ico');
+    return publicAsset('tray.ico');
   }
 }

@@ -1,0 +1,17 @@
+<!--
+  Tray icon (capturing). Identical silhouette to tray.svg so it never jumps in
+  the tray — the only change is that the wave bars go from transparent to the
+  app's accent teal, which reads as "listening" at a glance.
+
+  Not wired up yet; TrayManager.iconPath() still always returns tray.ico.
+
+  Edit here, then regenerate: npm run icons
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="3 3 58 58" width="512" height="512">
+  <path d="M16 6 H48 A12 12 0 0 1 60 18 V34 A12 12 0 0 1 48 46 H32 L18 58 V46 H16 A12 12 0 0 1 4 34 V18 A12 12 0 0 1 16 6 Z" fill="#fff"/>
+  <g fill="#00d4aa">
+    <rect x="15" y="19" width="8" height="14" rx="4"/>
+    <rect x="28" y="13" width="8" height="26" rx="4"/>
+    <rect x="41" y="17" width="8" height="18" rx="4"/>
+  </g>
+</svg>

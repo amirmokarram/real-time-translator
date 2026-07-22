@@ -43,9 +43,14 @@
 }
 
 .app-logo {
-  color: var(--primary);
   display: flex;
   align-items: center;
+
+  img {
+    display: block;
+    width: 16px;
+    height: 16px;
+  }
 }
 
 .app-name {

@@ -11,6 +11,7 @@
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "electron:compile": "tsc -p tsconfig.electron.json && node scripts/copy-electron-config.mjs",
+    "icons": "electron scripts/generate-icons.mjs",
     "electron:dev": "concurrently -k -n Angular,Electron -c cyan,yellow \"ng serve\" \"npm run electron:wait-start\"",
     "electron:wait-start": "wait-on http://localhost:4200 && npm run electron:compile && cross-env ELECTRON_DEV=true electron .",
     "electron:build": "ng build --configuration production && tsc -p tsconfig.electron.json && node scripts/copy-electron-config.mjs",
