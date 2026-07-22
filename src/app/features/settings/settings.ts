@@ -4,7 +4,7 @@ import { SettingsService } from '../../core/services/settings.service';
 import { ElectronBridgeService } from '../../core/services/electron-bridge.service';
 import { AudioService } from '../../core/services/audio.service';
 import { RecordingService } from '../../core/services/recording.service';
-import { AppSettings, AudioSource, ProviderMeta } from '../../core/models/app.models';
+import { AppSettings, AudioSource, ProviderMeta, SettingsResetSection } from '../../core/models/app.models';
 import { LANGUAGES } from '../../core/models/languages';
 
 interface ProviderFormState {
@@ -13,18 +13,9 @@ interface ProviderFormState {
   validResult: { valid: boolean; error?: string } | null;
 }
 
-// Leaf nodes of the left-panel settings tree.
-type SettingsNode =
-  | 'general'
-  | 'hotkeys'
-  | 'languages'
-  | 'recording'
-  | 'translation-providers'
-  | 'translation-prompt'
-  | 'stt-engine'
-  | 'stt-segmentation'
-  | 'assist-provider'
-  | 'assist-prompt';
+// Leaf nodes of the left-panel settings tree. Same list as the reset sections —
+// every panel restores its own defaults, so the two can't drift apart.
+type SettingsNode = SettingsResetSection;
 
 type HotkeyKey = keyof AppSettings['hotkeys'];
 
@@ -125,11 +116,27 @@ export class SettingsComponent implements OnInit, OnDestroy {
   protected sttValidResult = signal<{ valid: boolean; error?: string } | null>(null);
 
   async ngOnInit(): Promise<void> {
-    const settings = this.settingsSvc.settings();
-    const providers = this.settingsSvc.providers();
+    // Prompt editors show the saved custom prompt, or the built-in default —
+    // fetched before hydrating so the editors can fall back to it.
+    this.defaultPrompts = await this.bridge.getDefaultPrompts();
+    this.hydrate(this.settingsSvc.settings());
+
+    this.alwaysOnTop.set(await this.bridge.isAlwaysOnTop());
+    this.unsubAlwaysOnTop = this.bridge.onAlwaysOnTopState((on) => this.alwaysOnTop.set(on));
+
+    // Mic list for the recording panel. The ids carry a 'mic:' prefix for the
+    // capture dropdown; the recording setting stores the bare deviceId.
+    if (this.audio.sources().length === 0) await this.audio.loadSources().catch(() => {});
+    this.microphones.set(this.audio.sources().filter((s) => s.kind === 'microphone'));
+  }
+
+  // Fill every form control from the persisted settings. Runs on open and again
+  // after a Restore Defaults, so the panels show what was actually written rather
+  // than the values the user had been editing.
+  private hydrate(settings: AppSettings | null): void {
     const states: Record<string, ProviderFormState> = {};
 
-    for (const p of providers) {
+    for (const p of this.settingsSvc.providers()) {
       const saved = settings?.providers[p.id] ?? {};
       const fields: Record<string, string> = {};
       for (const f of p.configFields) {
@@ -147,8 +154,6 @@ export class SettingsComponent implements OnInit, OnDestroy {
     this.languageSource.set(settings?.languages.source ?? 'en');
     this.languageTarget.set(settings?.languages.target ?? 'fa');
     if (settings?.hotkeys) this.hotkeys.set({ ...settings.hotkeys });
-    this.alwaysOnTop.set(await this.bridge.isAlwaysOnTop());
-    this.unsubAlwaysOnTop = this.bridge.onAlwaysOnTopState((on) => this.alwaysOnTop.set(on));
     this.sttProvider.set(settings?.stt.provider ?? 'deepgram');
     this.sttApiKey.set(settings?.stt.apiKey ?? '');
     this.sttEndpoint.set(settings?.stt.endpoint || this.whisperDefaults.endpoint);
@@ -164,17 +169,10 @@ export class SettingsComponent implements OnInit, OnDestroy {
     this.sttLivePartial.set(settings?.stt.livePartial ?? false);
     this.sttPartialDebounceMs.set(settings?.stt.partialDebounceMs ?? 600);
 
-    // Mic list for the recording panel. The ids carry a 'mic:' prefix for the
-    // capture dropdown; the recording setting stores the bare deviceId.
-    if (this.audio.sources().length === 0) await this.audio.loadSources().catch(() => {});
-    this.microphones.set(this.audio.sources().filter((s) => s.kind === 'microphone'));
-
     this.assistProvider.set(settings?.assist.provider ?? 'claude');
     this.assistModel.set(settings?.assist.model ?? '');
     this.assistEndpoint.set(settings?.assist.endpoint ?? 'http://localhost:11434');
 
-    // Prompt editors: show the saved custom prompt, or the built-in default.
-    this.defaultPrompts = await this.bridge.getDefaultPrompts();
     this.assistPrompt.set(settings?.prompts.assist?.trim() ? settings.prompts.assist : this.defaultPrompts.assist);
     this.translationPrompt.set(
       settings?.prompts.translation?.trim() ? settings.prompts.translation : this.defaultPrompts.translation
@@ -182,6 +180,34 @@ export class SettingsComponent implements OnInit, OnDestroy {
     this.interviewPrompt.set(
       settings?.prompts.interviewAnswer?.trim() ? settings.prompts.interviewAnswer : this.defaultPrompts.interviewAnswer
     );
+  }
+
+  // ── Restore defaults ──────────────────────────────────────────────────────────
+  // Each panel restores its own section; General also offers 'all'. Main owns the
+  // defaults and the rule about what survives (keys, endpoints, folder paths and
+  // the chosen mic are never reset), and returns the settings it actually wrote.
+
+  protected resetting = signal(false);
+  protected restored = signal<SettingsNode | 'all' | null>(null);
+  // 'Restore all' is one click away from undoing every panel, so it asks first.
+  protected confirmingResetAll = signal(false);
+  // A rejected IPC call (e.g. an app running from before the handler existed)
+  // would otherwise make the button look like it simply does nothing.
+  protected restoreError = signal<string | null>(null);
+
+  protected async restoreDefaults(section: SettingsNode | 'all'): Promise<void> {
+    this.resetting.set(true);
+    this.restoreError.set(null);
+    try {
+      this.hydrate(await this.settingsSvc.resetSection(section));
+      this.confirmingResetAll.set(false);
+      this.restored.set(section);
+      setTimeout(() => { if (this.restored() === section) this.restored.set(null); }, 2500);
+    } catch (err: unknown) {
+      this.restoreError.set(err instanceof Error ? err.message : String(err));
+    } finally {
+      this.resetting.set(false);
+    }
   }
 
   // ── Languages (translation direction) ─────────────────────────────────────────

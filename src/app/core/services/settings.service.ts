@@ -1,5 +1,5 @@
 import { Injectable, inject, signal } from '@angular/core';
-import { AppSettings, ProviderMeta } from '../models/app.models';
+import { AppSettings, ProviderMeta, SettingsResetSection } from '../models/app.models';
 import { ElectronBridgeService } from './electron-bridge.service';
 
 @Injectable({ providedIn: 'root' })
@@ -18,6 +18,15 @@ export class SettingsService {
     this.settings.set(settings);
     this.providers.set(providers);
     this.loaded.set(true);
+  }
+
+  // Restore one panel (or everything) to the shipped defaults. Main owns the
+  // defaults and does the writing, so the fresh settings come back from it —
+  // no local guess at what a reset should produce.
+  async resetSection(section: SettingsResetSection | 'all'): Promise<AppSettings> {
+    const settings = await this.bridge.resetSettings(section);
+    this.settings.set(settings);
+    return settings;
   }
 
   activeProvider(): string {

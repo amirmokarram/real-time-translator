@@ -7,6 +7,22 @@
 // (./electron) — a plain .ts here would trip "file is not under rootDir". Both
 // tsconfigs include this file explicitly. Keep it type-only (no `const`/runtime).
 
+// The Settings panels that can be restored to defaults. One list, three users:
+// the renderer's panel tree (SettingsNode), the main-process RESET_SECTIONS table
+// that says which fields each panel owns, and the settings:reset IPC signature —
+// so a new panel can't quietly ship without a reset, or reset the wrong fields.
+export type SettingsResetSection =
+  | 'general'
+  | 'hotkeys'
+  | 'languages'
+  | 'recording'
+  | 'translation-providers'
+  | 'translation-prompt'
+  | 'stt-engine'
+  | 'stt-segmentation'
+  | 'assist-provider'
+  | 'assist-prompt';
+
 export interface ProviderSettings {
   apiKey?: string;
   model?: string;

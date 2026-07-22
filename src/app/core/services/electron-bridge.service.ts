@@ -12,6 +12,7 @@ import {
   RecordingStopResult,
   RecordingTrack,
   SessionNotes,
+  SettingsResetSection,
   TranslationResult,
 } from '../models/app.models';
 
@@ -61,6 +62,10 @@ export class ElectronBridgeService {
 
   saveSettings(settings: Partial<AppSettings>): Promise<void> {
     return this.api?.saveSettings(settings) ?? Promise.resolve();
+  }
+
+  resetSettings(section: SettingsResetSection | 'all'): Promise<AppSettings> {
+    return this.api?.resetSettings(section) ?? Promise.resolve(mockSettings);
   }
 
   minimizeWindow(): void {

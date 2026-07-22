@@ -21,8 +21,8 @@ export interface ProviderMeta {
 // AppSettings / ProviderSettings are defined once in shared/app-settings.d.ts
 // (shared with the Electron main process) and re-exported here so renderer code
 // can keep importing them from this models barrel.
-import type { AppSettings, ProviderSettings } from '../../../../shared/app-settings';
-export type { AppSettings, ProviderSettings };
+import type { AppSettings, ProviderSettings, SettingsResetSection } from '../../../../shared/app-settings';
+export type { AppSettings, ProviderSettings, SettingsResetSection };
 
 // ── Assist mode ─────────────────────────────────────────────────────────────
 
@@ -161,6 +161,10 @@ export interface ElectronAPI {
   isAlwaysOnTop(): Promise<boolean>;
   getSettings(): Promise<AppSettings>;
   saveSettings(settings: Partial<AppSettings>): Promise<void>;
+  // Restores one panel — or 'all' — to the shipped defaults and returns the
+  // resulting settings. API keys, endpoints, folder paths and the selected
+  // microphone are never touched (see RESET_SECTIONS in settings-store.ts).
+  resetSettings(section: SettingsResetSection | 'all'): Promise<AppSettings>;
   getAudioSources(): Promise<AudioSource[]>;
   startCapture(sourceId: string): Promise<void>;
   stopCapture(): Promise<void>;

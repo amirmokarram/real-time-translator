@@ -87,6 +87,25 @@ export function registerIpcHandlers(
     hotkeyManager.apply(settingsStore.get().hotkeys);
   });
 
+  // Restore one panel (or everything) to the shipped defaults, then re-apply the
+  // settings that main owns at runtime. Returns the new settings so the renderer
+  // re-hydrates from the store rather than guessing what changed.
+  ipcMain.handle('settings:reset', async (_event, section: unknown) => {
+    await settingsStore.reset(section as Parameters<typeof settingsStore.reset>[0]);
+    hotkeyManager.apply(settingsStore.get().hotkeys);
+
+    // alwaysOnTop is live window state, so it is restored by driving the same
+    // toggle the header pin and tray use (persist + apply + broadcast) instead of
+    // writing the value behind the window's back.
+    const wantsAlwaysOnTop = settingsStore.defaults().window.alwaysOnTop;
+    if ((section === 'general' || section === 'all')
+        && settingsStore.get().window.alwaysOnTop !== wantsAlwaysOnTop) {
+      await toggleAlwaysOnTop();
+    }
+
+    return settingsStore.get();
+  });
+
   // ── Audio ─────────────────────────────────────────────────────────────────────
   ipcMain.handle('audio:get-sources', () => audioCapture.getSources());
   ipcMain.handle('audio:start-capture', (_event, sourceId: string) => {

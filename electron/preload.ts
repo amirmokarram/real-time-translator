@@ -14,6 +14,7 @@ const electronAPI = {
   // Settings
   getSettings: () => ipcRenderer.invoke('settings:get'),
   saveSettings: (settings: unknown) => ipcRenderer.invoke('settings:save', settings),
+  resetSettings: (section: string) => ipcRenderer.invoke('settings:reset', section),
 
   // Audio sources
   getAudioSources: () => ipcRenderer.invoke('audio:get-sources'),

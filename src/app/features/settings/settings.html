@@ -1220,5 +1220,59 @@
       </section>
     }
 
+    <!-- ── Restore defaults ──────────────────────────────────────────────────
+         One footer for the whole pane: it always targets the panel currently on
+         screen, so every panel gets a reset without repeating the control in ten
+         section headers. -->
+    <section class="settings-section reset-footer">
+      <div class="setting-row">
+        <div class="setting-info">
+          <label class="setting-label">Restore this panel's defaults</label>
+          <span class="setting-desc">
+            API keys, server endpoints, folder paths and the selected microphone are always kept.
+          </span>
+        </div>
+        <div class="setting-control">
+          @if (restored() === activeNode()) {
+            <span class="restore-flash">Restored</span>
+          }
+          <button class="btn-test" [disabled]="resetting()" (click)="restoreDefaults(activeNode())">
+            Restore defaults
+          </button>
+        </div>
+      </div>
+
+      @if (restoreError(); as err) {
+        <div class="validation-result invalid restore-error">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          Couldn't restore defaults: {{ err }}
+        </div>
+      }
+
+      @if (activeNode() === 'general') {
+        <div class="setting-row">
+          <div class="setting-info">
+            <label class="setting-label">Restore all settings</label>
+            <span class="setting-desc">
+              Every panel at once — languages, providers, recognition, recording, hotkeys and prompts.
+            </span>
+          </div>
+          <div class="setting-control">
+            @if (restored() === 'all') {
+              <span class="restore-flash">Restored</span>
+            }
+            @if (confirmingResetAll()) {
+              <button class="btn-test" (click)="confirmingResetAll.set(false)">Cancel</button>
+              <button class="btn-test danger" [disabled]="resetting()" (click)="restoreDefaults('all')">
+                Yes, restore everything
+              </button>
+            } @else {
+              <button class="btn-test danger" (click)="confirmingResetAll.set(true)">Restore all…</button>
+            }
+          </div>
+        </div>
+      }
+    </section>
+
   </div>
 </div>
