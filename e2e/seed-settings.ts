@@ -6,6 +6,9 @@
 export interface SeedOverrides {
   livePartial?: boolean;
   commitOnClause?: boolean;
+  // Idle fallback that force-commits an un-punctuated tail. Raise it to take the
+  // safety timer out of play when asserting on the segmentation rules themselves.
+  sentenceMaxWaitMs?: number;
   // Question Bank: point at a fixture folder of markdown Q&A files so the assist
   // panel's "Query From Q Bank" path is testable. Omitted → no bank configured.
   questionBank?: { folderPath: string; maxResults?: number };
@@ -33,7 +36,7 @@ export function buildSeedSettings(overrides: SeedOverrides = {}): unknown {
       useVad: false,
       endpointingMs: 800,
       utteranceEndMs: 1000,
-      sentenceMaxWaitMs: 1000,
+      sentenceMaxWaitMs: overrides.sentenceMaxWaitMs ?? 1000,
       commitOnClause: overrides.commitOnClause ?? false,
       livePartial: overrides.livePartial ?? false,
       partialDebounceMs: 100,

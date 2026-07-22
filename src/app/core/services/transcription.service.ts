@@ -80,16 +80,52 @@ export class TranscriptionService {
   private sentenceMaxWaitMs = 4000;
   // Punctuation that ends a row. Default is sentence-terminal only; with
   // commitOnClause the user also splits on clause punctuation for snappier rows.
-  private sentenceRe = TranscriptionService.buildSentenceRe(false);
+  private boundaryRe = TranscriptionService.buildBoundaryRe(false);
   private endsRe = TranscriptionService.buildEndsRe(false);
 
-  private static buildSentenceRe(clause: boolean): RegExp {
+  // Every candidate row break in the buffer: punctuation (plus an optional closing
+  // quote/bracket) that is followed by whitespace. Global — findSentenceEnd walks
+  // the candidates and lets `isRealBoundary` veto the ones that only look like one.
+  private static buildBoundaryRe(clause: boolean): RegExp {
     const p = clause ? '.!?,;:' : '.!?';
-    return new RegExp(`^\\s*(.+?[${p}]["')\\]]?)\\s+(?=\\S)`, 's');
+    return new RegExp(`[${p}]["')\\]]?(?=\\s)`, 'g');
   }
   private static buildEndsRe(clause: boolean): RegExp {
     const p = clause ? '.!?,;:' : '.!?';
     return new RegExp(`[${p}]["')\\]]?\\s*$`);
+  }
+
+  // ── What actually counts as a sentence end ────────────────────────────────────
+  // The last whitespace-delimited token of a candidate sentence, so its final "."
+  // can be vetted. Clause punctuation is never ambiguous, so only "." is checked.
+  private static readonly LAST_TOKEN_RE = /(\S+)\s*$/;
+
+  // Tokens ending in "." that don't end a sentence. Deliberately not exhaustive,
+  // and deliberately free of words that also stand alone ("no.", "al.") — a miss
+  // costs one wrong split, a false positive glues two real sentences together.
+  private static readonly ABBREVIATIONS = new Set([
+    'mr.', 'mrs.', 'ms.', 'dr.', 'prof.', 'sr.', 'jr.', 'st.', 'mt.', 'ft.',
+    'vs.', 'etc.', 'inc.', 'ltd.', 'co.', 'corp.', 'dept.', 'est.', 'approx.',
+    'fig.', 'vol.', 'ave.', 'rd.', 'blvd.',
+    'jan.', 'feb.', 'mar.', 'apr.', 'jun.', 'jul.', 'aug.', 'sep.', 'sept.',
+    'oct.', 'nov.', 'dec.',
+  ]);
+
+  // Does `text` (a candidate sentence, ending exactly at its punctuation) really
+  // end there? Only a "." can lie.
+  private static isRealBoundary(text: string): boolean {
+    if (!text.endsWith('.')) return true;
+    const token = TranscriptionService.LAST_TOKEN_RE.exec(text)?.[1] ?? '';
+    const t = token.replace(/^["'(\[]+/, '').toLowerCase();
+    if (TranscriptionService.ABBREVIATIONS.has(t)) return false;
+    // Note there is no decimal rule: a boundary candidate must have whitespace
+    // after the dot, and "1.5"/"v1.2" don't — so a number that ends a sentence
+    // ("I have 25.", which `numerals=true` produces constantly) stays a boundary.
+    //
+    // Initials and dotted initialisms — "J.", "e.g.", "U.S.A.": a single letter
+    // sitting at the start or after a dot never ends a sentence.
+    if (/(^|\.)[a-z]\.$/.test(t)) return false;
+    return true;
   }
 
   // Custom-vocabulary field → clean term list. Users type one term per line (or
@@ -128,6 +164,7 @@ export class TranscriptionService {
         }
         this.pendingFinal = `${this.pendingFinal} ${text}`.trim();
         this.drainSentences();
+        this.commitCompleteTail();
       }
       if (endOfUtterance) this.endUtterance();
       else this.interimText.set(this.liveText(''));
@@ -160,7 +197,7 @@ export class TranscriptionService {
     // Apply latency-tuning knobs for this session.
     this.sentenceMaxWaitMs = stt?.sentenceMaxWaitMs ?? 4000;
     const clause = stt?.commitOnClause ?? false;
-    this.sentenceRe = TranscriptionService.buildSentenceRe(clause);
+    this.boundaryRe = TranscriptionService.buildBoundaryRe(clause);
     this.endsRe = TranscriptionService.buildEndsRe(clause);
 
     if (stt?.provider === 'mock') {
@@ -215,29 +252,68 @@ export class TranscriptionService {
   // ── Sentence segmentation ─────────────────────────────────────────────────────
 
   // Peel every complete sentence that is already followed by the start of the
-  // next one. Leaving the trailing (possibly unfinished) sentence in the buffer
-  // avoids splitting on a "." that's really a decimal/abbreviation mid-flow.
+  // next one. The trailing sentence stays in the buffer — commitCompleteTail
+  // releases it immediately when its punctuation is unambiguous, otherwise the
+  // utterance end or the idle timer does.
   private drainSentences(): void {
-    const re = this.sentenceRe;
-    let m: RegExpExecArray | null;
-    while ((m = re.exec(this.pendingFinal)) !== null) {
-      const sentence = m[1].trim();
+    for (;;) {
+      const end = this.findSentenceEnd(this.pendingFinal);
+      if (end === -1) return;
+      const sentence = this.pendingFinal.slice(0, end).trim();
       // The sentence starts at the front of the buffer, so its first word is the
       // first pending one. Read before consuming.
       const startedAt = this.pendingWords[0];
-      this.pendingFinal = this.pendingFinal.slice(m[0].length);
+      this.pendingFinal = this.pendingFinal.slice(end).trimStart();
       this.pendingWords.splice(0, TranscriptionService.countWords(sentence));
-      if (sentence) this.emitSentence(sentence, startedAt);
+      if (!sentence) return;
+      this.emitSentence(sentence, startedAt);
     }
+  }
+
+  // Index just past the first real sentence boundary in `text`, or -1 if there
+  // isn't one yet. Candidates that turn out to be an abbreviation, a decimal or an
+  // initial are skipped, so "I met Dr. Smith today." stays a single row.
+  private findSentenceEnd(text: string): number {
+    const re = this.boundaryRe;
+    re.lastIndex = 0;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(text)) !== null) {
+      const end = m.index + m[0].length;
+      // Nothing but whitespace left → this is the trailing sentence; leave it in
+      // the buffer for commitCompleteTail (or the utterance end) to decide on.
+      if (!/\S/.test(text.slice(end))) return -1;
+      if (TranscriptionService.isRealBoundary(text.slice(0, end))) return end;
+    }
+    return -1;
   }
 
   private static countWords(text: string): number {
     return text.split(/\s+/).filter(Boolean).length;
   }
 
+  // `drainSentences` only peels a sentence once the NEXT one has started arriving,
+  // which costs the trailing — and freshest — sentence the whole endpointing
+  // silence (~800ms-1s) before it reaches translation, even though the speaker
+  // clearly finished it. So commit the tail as soon as it ends in unambiguous
+  // sentence-terminal punctuation, and let only the ambiguous cases keep waiting.
+  //
+  // Sentence-terminal even under commitOnClause: a fragment ending on a comma is
+  // mid-thought by definition, so there is nothing to gain by rushing it.
+  private static readonly TERMINAL_TAIL_RE = /[.!?]["')\]]?\s*$/;
+
+  private commitCompleteTail(): void {
+    const tail = this.pendingFinal.trim();
+    if (!tail) return;
+    if (!TranscriptionService.TERMINAL_TAIL_RE.test(tail)) return;
+    if (!TranscriptionService.isRealBoundary(tail)) return;
+    this.commitRemainder();
+  }
+
   // Backend signalled end-of-speech. Drain whole sentences; commit the tail too
   // if it already ends in terminal punctuation, otherwise hold it (to join with
-  // the next utterance) under the idle timer.
+  // the next utterance) under the idle timer. No abbreviation vetting here: the
+  // speaker actually stopped talking, which outweighs what the punctuation looks
+  // like — nothing is coming to complete "I met Dr." anyway.
   private endUtterance(): void {
     this.drainSentences();
     const tail = this.pendingFinal.trim();

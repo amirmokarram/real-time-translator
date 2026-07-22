@@ -63,6 +63,43 @@ test('resolves ${SOURCE}/${TARGET} tokens to the configured language names at tr
     .toHaveText('From English to Persian');
 });
 
+test.describe('trailing-sentence commit', () => {
+  // The idle fallback is pushed far out so these assertions can only be satisfied
+  // by the punctuation rules, never by the safety timer firing behind them.
+  test.use({ seed: { sentenceMaxWaitMs: 60000 } });
+
+  test('commits a finished sentence without waiting for the next utterance', async ({ page }) => {
+    await startCapture(page);
+    // Mid-utterance: no endOfUtterance and no following words. This used to sit in
+    // the buffer until the speaker's next sentence arrived.
+    await feed(page, { kind: 'final', text: 'The build is green.' });
+
+    await expect(page.locator('.history-row .hcell-en .hcell-text'))
+      .toHaveText(['The build is green.']);
+  });
+
+  test('holds a tail whose dot is an abbreviation, and keeps the sentence whole', async ({ page }) => {
+    await startCapture(page);
+    await feed(page, { kind: 'final', text: 'I met Dr.' });
+    await expect(page.locator('.history-row')).toHaveCount(0);
+
+    // The continuation proves the "." was never a boundary: one row, not two.
+    await feed(page, { kind: 'final', text: 'Smith yesterday. Today I rested.' });
+    await expect(page.locator('.history-row .hcell-en .hcell-text'))
+      .toHaveText(['I met Dr. Smith yesterday.', 'Today I rested.']);
+  });
+
+  test('still splits after a version number or a spoken numeral', async ({ page }) => {
+    await startCapture(page);
+    // The abbreviation guard must not over-reach: numbers end sentences all the
+    // time once DeepGram's numerals=true turns spoken digits into figures.
+    await feed(page, { kind: 'final', text: 'We shipped v1.2. The team is 25.' });
+
+    await expect(page.locator('.history-row .hcell-en .hcell-text'))
+      .toHaveText(['We shipped v1.2.', 'The team is 25.']);
+  });
+});
+
 test.describe('live partial preview', () => {
   test.use({ seed: { livePartial: true } });
 
