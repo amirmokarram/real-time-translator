@@ -12,6 +12,9 @@ import { publicAsset } from './assets';
  */
 export class TrayManager {
   private tray: Tray | null = null;
+  // Last icon we handed to setImage. refresh() runs on window show/hide too,
+  // so without this the .ico would be re-read from disk on every menu rebuild.
+  private currentIcon: string | null = null;
 
   constructor(
     // Getter (not a captured reference) so a recreated main window (macOS
@@ -28,17 +31,18 @@ export class TrayManager {
 
   create(): void {
     if (this.tray) return;
-    this.tray = new Tray(this.iconPath());
-    this.tray.setToolTip('Real-Time Translator');
+    this.tray = new Tray(this.iconPath(this.audioCapture.isActive()));
     this.tray.on('double-click', () => this.showMainWindow());
     this.refresh();
   }
 
-  /** Rebuild the context menu so labels reflect current state. */
+  /** Rebuild the context menu + icon so both reflect current state. */
   refresh(): void {
     if (!this.tray) return;
     const win = this.getMainWindow();
     const winVisible = !!win && !win.isDestroyed() && win.isVisible();
+
+    this.applyIcon(this.audioCapture.isActive());
 
     this.tray.setContextMenu(
       Menu.buildFromTemplate([
@@ -97,10 +101,25 @@ export class TrayManager {
     this.refresh();
   }
 
-  // Glyph-only icon sized for the tray (16/20/24/32/40/48) — the app's own
-  // icon.ico is a squircle tile, which at 16px is mostly frame. tray-active.ico
-  // is the same silhouette with teal bars, for a future "capturing" state.
-  private iconPath(): string {
-    return publicAsset('tray.ico');
+  /**
+   * Swap the tray icon + tooltip to match capture state, so a hidden window
+   * still tells you at a glance whether the app is listening. Both icons share
+   * a silhouette — only the waveform bars change (hollow → teal) — so the tray
+   * never appears to jump.
+   */
+  private applyIcon(capturing: boolean): void {
+    const icon = this.iconPath(capturing);
+    if (!this.tray || icon === this.currentIcon) return;
+    this.tray.setImage(icon);
+    this.tray.setToolTip(
+      capturing ? 'Real-Time Translator — capturing' : 'Real-Time Translator'
+    );
+    this.currentIcon = icon;
+  }
+
+  // Glyph-only icons sized for the tray (16/20/24/32/40/48) — the app's own
+  // icon.ico is a squircle tile, which at 16px is mostly frame.
+  private iconPath(capturing: boolean): string {
+    return publicAsset(capturing ? 'tray-active.ico' : 'tray.ico');
   }
 }
