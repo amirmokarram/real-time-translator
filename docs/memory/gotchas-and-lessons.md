@@ -5,12 +5,18 @@ metadata:
   node_type: memory
   type: project
   originSessionId: d1468163-6e3b-4140-8e02-a0b3d8eb0ee3
-  modified: 2026-07-21T21:34:22.567Z
+  modified: 2026-07-22T14:42:04.400Z
 ---
 
 Non-obvious constraints discovered the hard way. Each cost real debugging time — check here first.
 
 **Adding an `AppSettings` field means THREE files, not two.** `shared/app-settings.d.ts` (schema) + `electron/config/default-settings.json` (main defaults) + **`src/app/core/services/electron-bridge.service.ts`**, which keeps its own hardcoded `DEFAULT_SETTINGS` fallback that must also satisfy the type. Miss the third and `npm run electron:compile` passes while `ng build` fails with `TS2739: ... is missing the following properties`. Cost a build cycle in Phase 6 (2026-07-21).
+
+**A "which fields does this panel own" table must follow what the panel RENDERS, not how the fields group conceptually.** Restore Defaults (2026-07-22) filed `stt.endpointingMs`/`utteranceEndMs` under the Segmentation panel because they read as "latency tuning" — but the **Engine** panel is what displays them, so Engine's reset skipped exactly those fields. The failure is invisible: a whitelist entry that's missing looks identical to a field that was already at its default, so nothing on screen changes and there's no error. Amir found it in a minute by setting Endpointing to 100 and pressing the button. Same trap applies to any per-panel/per-section mapping (validation, dirty-tracking, export).
+
+**Sentence-boundary detection needs NO decimal rule.** Tempting to reject a `.` preceded by a digit ("3.5", "v1.2") — but a boundary candidate requires **whitespace after the dot**, and decimals have none, so they were never at risk. Adding the rule actively breaks the common case: `numerals: true` turns spoken numbers into figures, so sentences ending "…the team is 25." are constant, and the rule would glue them to the next sentence. Fragments are also space-joined (`"…to 1." + "5 seconds."` → `"1. 5 seconds"`), so a decimal split across two fragments is unrecoverable anyway. Guard abbreviations and dotted initialisms only — and keep standalone words out of the abbreviation list (`no.`, `al.`): a false positive merges two real sentences, which is worse than one wrong split.
+
+**A rejected `ipcRenderer.invoke` with no `catch` is an invisible button.** A new IPC handler + `preload.ts` entry cannot be hot-reloaded — an app already running rejects with "No handler registered", and if the renderer swallows it the control just does nothing, with no console error the user will see. Always surface the rejection in the UI. This cost a wrong first diagnosis on Restore Defaults (2026-07-22): "your app predates the handler, restart it" — the real cause was a mapping bug, and the silent failure hid the difference.
 
 **Web Speech API does NOT work in Electron.** Chromium's Electron build lacks Google's internal API keys for the speech service, so `webkitSpeechRecognition` always fails with `error: 'network'` no matter the CSP/connectivity. This is why STT uses DeepGram instead. Do not try to "fix" Web Speech API in Electron — it's unfixable.
 

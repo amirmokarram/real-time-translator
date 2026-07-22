@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: efb6c1f4-0f8c-44d0-8361-1634d470274d
-  modified: 2026-07-21T22:30:11.338Z
+  modified: 2026-07-22T14:42:41.795Z
 ---
 
 Playwright E2E tests live in `e2e/` and drive the **built** Electron app + real Angular
@@ -57,6 +57,20 @@ CSP `media-src` or protocol-handler regression); missing sidecar still plays; no
 **the merge leaves the transcript untouched**; notes reload from disk after navigating away;
 session Ask carries the whole transcript, per-line Ask carries **only** that line (`toHaveText`, so
 a leak of the whole meeting fails). **40 passed, 1 skipped locally.**
+
+**Segmentation + Restore-Defaults coverage (added 2026-07-22): 52 passed, 1 skipped locally.**
+`translation-pipeline.spec.ts` gained a `trailing-sentence commit` describe using the new
+`SeedOverrides.sentenceMaxWaitMs` set to **60000** — the point is to push the idle safety timer out
+of reach so the assertions can only be satisfied by the punctuation rules, never by the timer firing
+behind them (the earlier default of 1000 would have made the negative case pass for the wrong
+reason). Covers: a mid-utterance `final` with no `endOfUtterance` commits immediately; an
+abbreviation tail is held and the sentence stays whole; numbers and version strings still split.
+`settings.spec.ts` gained 3 reset tests — a panel reset re-hydrates its inputs *and* leaves the
+other STT panel alone, the Engine panel resets Endpointing (the regression Amir found) while keeping
+the API key, and restore-all crosses panels while both API keys survive. **Selector trap:** Playwright's
+`hasText` is substring **and case-insensitive**, so `.field-group` filtered by `'Model'` matched three
+groups whose *hints* mention "model" — match the label element exactly
+(`filter({ has: locator('label.field-label', { hasText: /^Model$/ }) })`).
 
 **Lesson from the post-live-test fixes (2026-07-21): verify a regression test FAILS without its
 fix.** Two of these tests were worthless until checked. The first seek test asserted only
