@@ -109,3 +109,15 @@ providers, language-pair switching UI, latency knobs, history length, assist pro
 `mix`/`separate` mic modes are inert under test (the fake device only offers a *microphone*, and
 mic modes only engage for **system audio**), and seeking is only proven on a few seconds of
 silence — not on a long cue-less WebM.
+
+**Assist scroll coverage (added 2026-07-23):** 3 tests in `assist.spec.ts` pinning the "a
+streaming answer never moves the scroll" behaviour (see [[phase-status]]). Two things this
+forced. (1) **`EchoAssistProvider` now streams over time (8 ms/token) instead of one synchronous
+burst** — a double that finishes before the test can act makes *mid-stream* behaviour untestable
+by construction. Non-streaming callers (the Q-Bank router) pass no `onChunk` and skip the delay,
+so the routing tests above are unaffected. (2) **The assertion samples `scrollTop` repeatedly
+while the answer streams and requires every sample identical**, rather than comparing before/after
+— a single end-to-end comparison passes even if the view jumped and came back. Also: the first
+version of this test parked the scroll at `0`, which is the one position immune to being clamped
+downward, so it passed against an implementation that still moved the view. **Park a scroll test
+somewhere in the middle; the extremes hide whole classes of failure.**
