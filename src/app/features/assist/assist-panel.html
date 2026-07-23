@@ -54,7 +54,7 @@
     }
 
     <!-- ── Thread ─────────────────────────────────────────────────────────── -->
-    <div class="assist-thread" #thread>
+    <div class="assist-thread" #thread (scroll)="onThreadScroll()">
       @if (assist.messages().length === 0 && !assist.streaming()) {
         <div class="assist-quick">
           @if (assist.context()) {
@@ -110,6 +110,18 @@
         <div class="msg msg-assistant">
           <span class="thinking-dots"><span></span><span></span><span></span></span>
         </div>
+      }
+
+      <!-- The thread never scrolls itself, so while an answer streams the live
+           end drifts below the viewport; this jumps to it on demand. Sticky, so
+           it floats at the bottom of the scrollport without a wrapper. -->
+      @if (!atLiveEnd() && (assist.messages().length > 0 || assist.streaming())) {
+        <button class="jump-latest" (click)="jumpToLatest()" title="Jump to latest">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M12 5v14M19 12l-7 7-7-7"/>
+          </svg>
+          @if (assist.isAsking()) { Still writing… } @else { Jump to latest }
+        </button>
       }
     </div>
 
