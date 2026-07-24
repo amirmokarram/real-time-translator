@@ -2,7 +2,7 @@ import { test, expect } from './fixtures';
 
 test('boots into the translator shell with the seeded provider', async ({ page }) => {
   await expect(page.locator('header.app-header')).toBeVisible();
-  await expect(page.locator('.app-name')).toHaveText('Real-Time Translator');
+  await expect(page.locator('.app-name')).toHaveText('Earshot');
   await expect(page.locator('.translator-layout')).toBeVisible();
 
   // Confirms the echo provider is registered (TRANSLATOR_E2E) and settings loaded

@@ -112,7 +112,7 @@ export class TrayManager {
     if (!this.tray || icon === this.currentIcon) return;
     this.tray.setImage(icon);
     this.tray.setToolTip(
-      capturing ? 'Real-Time Translator — capturing' : 'Real-Time Translator'
+      capturing ? 'Earshot — capturing' : 'Earshot'
     );
     this.currentIcon = icon;
   }

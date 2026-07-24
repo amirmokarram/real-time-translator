@@ -1,11 +1,11 @@
 ---
 name: phase-status
-description: "Build phase tracker for the Real-Time Translator — what's done and what's next"
+description: "Build phase tracker for Earshot — what's done and what's next"
 metadata: 
   node_type: memory
   type: project
   originSessionId: d1468163-6e3b-4140-8e02-a0b3d8eb0ee3
-  modified: 2026-07-24T09:15:26.897Z
+  modified: 2026-07-24T09:56:37.259Z
 ---
 
 Status tracker. Durable engineering lessons are in [[gotchas-and-lessons]]; architecture in [[project-architecture]].
@@ -103,6 +103,8 @@ Two bugs the tests caught, both real: (1) chunk writes were **fire-and-forget**,
 
 **DONE — Always-on-top main window (2026-07-17, Amir tested good):** persisted `settings.window.alwaysOnTop` (default off) behind **three synced controls**: header pin icon (next to Overlay toggle), tray-menu checkbox, Settings → General toggle. Single implementation: `toggleAlwaysOnTop()` in `main.ts` (passed to both TrayManager and registerIpcHandlers) — flips the store, `mainWindow.setAlwaysOnTop`, `trayManager.refresh()`, broadcasts `window:always-on-top` so every UI syncs regardless of which control fired. IPC: `window:toggle-always-on-top` / `window:is-always-on-top` + `onAlwaysOnTopState` event. Restored at startup in `createMainWindow` (settings load first). Main window only — the overlay already floats (screen-saver level). E2E: settings.spec test asserts the real `BrowserWindow.isAlwaysOnTop()` via `electronApp.evaluate` + persistence; suite 29/29.
 
-**OPEN — rename the app (raised 2026-07-22, blocked on Amir).** During the icon work he asked to "change the app title and also app icon"; the icon shipped, the rename did not — he never named a replacement and dismissed the picker when asked (so **don't re-ask via a modal — offer names in the reply**, see [[collaboration-and-env]]). Still called **"Real-Time Translator"**. When he picks one, the display string lives in **5 files** — verified 2026-07-23 by `grep -rn "Real-Time Translator"` over `*.ts`/`*.html`/`*.json` excluding `node_modules`/`dist`/`docs`: `productName` in `electron-builder.json:3`, `<title>` in `src/index.html:6`, `.app-name` in `src/app/shared/header/header.html:11`, **both** tray tooltip strings in `electron/tray.ts:115` (idle + "— capturing", same line), and the assertion in `e2e/app-shell.spec.ts:5` — miss that one and the suite fails. Deliberately separate calls, each with migration cost, so **don't sweep them in silently**: the npm slug `name: "claude-real-time-translator"` in `package.json` (not user-visible), the `appId` `com.amir.realtimetranslator` (changing it makes the installer a different app — existing installs won't upgrade), and the GitHub repo name (breaks clone URLs + the `publish` block).
+**DONE — the app is named "Earshot" (2026-07-24).** Open since 2026-07-22; Amir picked from names offered in the reply (the earlier modal picker was dismissed — **offer names in prose, not a modal**, see [[collaboration-and-env]]). Chosen over Parley/Aside/Overhear because it names the **mechanism, not the language pair** — the same failure the old "EN→فا" icon had — and it covers recording/review/assist, which "Translator" undersold. The display string was changed in the **5 code files** the earlier audit found: `productName` in `electron-builder.json:3`, `<title>` in `src/index.html:6`, `.app-name` in `src/app/shared/header/header.html:11`, **both** tray tooltip strings in `electron/tray.ts:115` (idle + "— capturing", one line), and the assertion in `e2e/app-shell.spec.ts:5`; plus the `README.md` H1. Verified by re-running the grep (zero code hits) + `app-shell.spec.ts` 3/3 green.
+
+**Deliberately NOT renamed** — each is a separate call with its own migration cost: the npm slug `name: "claude-real-time-translator"` in `package.json` and the Angular project key in `angular.json` (neither user-visible); the `appId` `com.amir.realtimetranslator` (**changing it makes the installer a different app — existing installs would not upgrade, they'd install alongside**); and the GitHub repo name `real-time-translator` (breaks clone URLs and the `publish` block in `electron-builder.json:11`). If Amir ever wants the repo renamed, GitHub redirects the old URL but the `publish` block must be edited in the same commit.
 
 **Ideas discussed, NOT built:** assist reset-thread-on-close; README Screenshots section (needs actual PNGs from Amir); real mid-request assist abort (cancellation through all 4 providers — soft stop shipped instead). Everything else from the old idea list shipped (stop-generation + copy-answer 2026-07-17; markdown rendering earlier).

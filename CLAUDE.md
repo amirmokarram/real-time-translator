@@ -1,6 +1,6 @@
-# Real-Time Translator — Project Context
+# Earshot — Project Context
 
-Cross-platform desktop app for **real-time translation of system audio** (meetings, videos, calls). The user (Amir) listens to audio in one language and reads a live translation in another. The **language pair is fully user-configurable** (Settings → Languages) — any supported source→target pair from a curated catalog.
+Cross-platform desktop app for **real-time translation of system audio** (meetings, videos, calls). **Named "Earshot" on 2026-07-24** (previously "Real-Time Translator") — the display string only; the npm slug `claude-real-time-translator`, the `appId` `com.amir.realtimetranslator` and the GitHub repo name deliberately keep the old name, since changing the `appId` would orphan existing installs. The user (Amir) listens to audio in one language and reads a live translation in another. The **language pair is fully user-configurable** (Settings → Languages) — any supported source→target pair from a curated catalog.
 
 > Full detail lives in [`docs/memory/`](docs/memory/). This file is the auto-loaded summary — it travels with the repo, so project context survives a machine/OS change. The canonical copies I auto-read also live in `~/.claude/projects/D--Claude-RealTimeTranslator/memory/`; keep the two in sync (treat `~/.claude` as source of truth I edit, then copy here before committing).
 

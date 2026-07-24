@@ -1,11 +1,11 @@
 ---
 name: project-architecture
-description: Core architecture decisions for the Real-Time Translator Electron + Angular app
+description: Core architecture decisions for the Earshot Electron + Angular app
 metadata: 
   node_type: memory
   type: project
   originSessionId: d1468163-6e3b-4140-8e02-a0b3d8eb0ee3
-  modified: 2026-07-21T16:59:58.378Z
+  modified: 2026-07-24T09:56:38.586Z
 ---
 
 Real-time system-audio desktop translator built with Angular 21 + Electron 42. **Language pair is fully user-configurable** (Settings → Languages; added 2026-06-26) — any supported source→target pair from a curated catalog (no fixed English→Persian framing as of 2026-07-17).

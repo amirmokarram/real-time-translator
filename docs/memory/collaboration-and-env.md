@@ -1,11 +1,11 @@
 ---
 name: collaboration-and-env
-description: How Amir likes to work + the dev environment for the Real-Time Translator project
+description: How Amir likes to work + the dev environment for the Earshot project (formerly Real-Time Translator)
 metadata: 
   node_type: memory
   type: user
   originSessionId: d1468163-6e3b-4140-8e02-a0b3d8eb0ee3
-  modified: 2026-07-23T11:39:46.054Z
+  modified: 2026-07-24T09:56:33.961Z
 ---
 
 **Who:** Amir Mokarram (a.mokarram@gmail.com). Senior Software Engineer, 18+ yrs. Persian (Farsi) native speaker, English around A2–B1. (For deep career/personal context there is a separate `amir-mokarram-profile` skill — use that for CV/career work; this file is just project collaboration prefs.)

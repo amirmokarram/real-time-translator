@@ -1,4 +1,4 @@
-# Real-Time Translator
+# Earshot
 
 A cross-platform desktop app for **real-time translation of system audio** — meetings, videos, calls, and live interviews. It captures your computer's audio, transcribes it with streaming speech-to-text, translates it live, and shows a synced dual-pane view. It also includes an **Assist mode**: an LLM helper that explains the conversation and drafts answers you can read aloud.
 

@@ -1,11 +1,11 @@
 ---
 name: gotchas-and-lessons
-description: "Hard-won, non-obvious engineering lessons for the Real-Time Translator — read before debugging audio/STT/overlay/providers"
+description: "Hard-won, non-obvious engineering lessons for Earshot — read before debugging audio/STT/overlay/providers"
 metadata: 
   node_type: memory
   type: project
   originSessionId: d1468163-6e3b-4140-8e02-a0b3d8eb0ee3
-  modified: 2026-07-22T14:42:04.400Z
+  modified: 2026-07-24T09:56:35.824Z
 ---
 
 Non-obvious constraints discovered the hard way. Each cost real debugging time — check here first.

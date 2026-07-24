@@ -1,6 +1,6 @@
 {
   "appId": "com.amir.realtimetranslator",
-  "productName": "Real-Time Translator",
+  "productName": "Earshot",
   "directories": {
     "output": "release"
   },
